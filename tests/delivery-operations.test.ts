@@ -33,3 +33,14 @@ test("OTP attempts and cross-merchant assignment are rejected", () => {
   state = deliveryOperations.verifyOtp(state, "r1", "SV1042", "0000");
   assert.equal(state.orders[0].otpAttempts, 1);
 });
+
+test("cancellation restores eligible stock once and refunds stay paise-bounded", () => {
+  let state = freshSeed(); const before = state.inventory.find((item) => item.branchId === "b1" && item.productId === "p00")!.quantity;
+  state = { ...state, inventory: state.inventory.map((item) => item.branchId === "b1" && item.productId === "p00" ? { ...item, quantity: item.quantity - 2 } : item) };
+  state = deliveryOperations.cancel(state, "customer", "SV1042", "Changed my mind");
+  assert.equal(state.inventory.find((item) => item.branchId === "b1" && item.productId === "p00")?.quantity, before);
+  assert.throws(() => deliveryOperations.cancel(state, "customer", "SV1042", "Again"), /no longer/);
+  state = deliveryOperations.refund(state, "admin", "SV1042", 10000, "Service recovery");
+  assert.equal(state.refunds.at(-1)?.amountPaise, 10000);
+  assert.throws(() => deliveryOperations.refund(state, "admin", "SV1042", 60000, "Too much"), /exceeds/);
+});

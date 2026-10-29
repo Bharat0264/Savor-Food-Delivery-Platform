@@ -17,6 +17,10 @@ This milestone adds a shared mock delivery-operations service without any extern
 
 Location/map behavior remains explicitly illustrative. Rider registration UI from earlier milestones remains browser-local. Cancellation/refund and settlement policies are intentionally not expanded into external financial operations.
 
+## D.2 incremental completion
+
+Central cancellation and refund operations now use the same delivery service. Customer cancellations are allowed only before preparation, cancellation is idempotent, eligible pre-preparation inventory is restored once, and paid orders support bounded simulated partial or full refunds in integer paise. These changes create separate refund records and local audit/notification events without rewriting original payment snapshots.
+
 ## Validation
 
 - `npm run lint` — passed

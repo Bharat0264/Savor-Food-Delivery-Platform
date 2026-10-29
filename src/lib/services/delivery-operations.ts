@@ -6,6 +6,21 @@ const event = (state: State, orderId: string, actor: Actor | "system", type: str
 const get = (state: State, orderId: string) => { const order = state.orders.find((item) => item.id === orderId); if (!order) throw Error("Order not found."); return order; };
 const save = (state: State, order: Order, actor: Actor | "system", type: string, message: string, reason?: string) => event({ ...state, orders: state.orders.map((item) => item.id === order.id ? order : item) }, order.id, actor, type, message, reason);
 export const deliveryOperations = {
+  cancel(state: State, actor: "customer" | "merchant" | "admin", orderId: string, reason: string) {
+    const order = get(state, orderId); if (!reason.trim()) throw Error("A cancellation reason is required."); if (["Delivered", "Cancelled"].includes(order.status)) throw Error("This order can no longer be cancelled.");
+    if (actor === "customer" && !["Pending", "Accepted"].includes(order.status)) throw Error("Customer cancellation is no longer eligible after preparation starts.");
+    const restore = ["Pending", "Accepted"].includes(order.status);
+    const inventory = restore ? state.inventory.map((record) => { const quantity = order.items.filter((item) => item.productId === record.productId).reduce((sum, item) => sum + item.quantity, 0); return record.branchId === order.branchId && quantity ? { ...record, quantity: record.quantity + quantity } : record; }) : state.inventory;
+    const riders = state.riders.map((rider) => rider.id === order.riderId ? { ...rider, availability: "Available" as const } : rider);
+    return event({ ...state, inventory, riders, orders: state.orders.map((item) => item.id === orderId ? { ...item, status: "Cancelled", deliveryState: "unassigned", cancellationReason: reason, refundStatus: item.paymentStatus === "Simulated paid" ? "pending" : item.refundStatus } : item) }, orderId, actor, "order.cancelled", `${orderId}: order cancelled`, reason);
+  },
+  refund(state: State, actor: "merchant" | "admin", orderId: string, amountPaise: number, reason: string, outcome: "completed" | "failed" = "completed") {
+    const order = get(state, orderId); if (!reason.trim() || !Number.isSafeInteger(amountPaise) || amountPaise < 1) throw Error("Use a valid refund amount and reason."); if (order.paymentStatus !== "Simulated paid") throw Error("Only paid orders can be refunded.");
+    const refunded = state.refunds.filter((refund) => refund.orderId === orderId && refund.status === "Simulated").reduce((sum, refund) => sum + refund.amountPaise, 0); if (refunded + amountPaise > order.totalPaise) throw Error("Refund exceeds the remaining refundable amount.");
+    if (outcome === "failed") return event(save(state, order, actor, "refund.failed", `${orderId}: refund failed`, reason), orderId, actor, "refund.failed", `${orderId}: refund failed`, reason);
+    const refund = { id: id("refund"), orderId, amountPaise, status: "Simulated" as const, reason };
+    return event({ ...state, refunds: [...state.refunds, refund], orders: state.orders.map((item) => item.id === orderId ? { ...item, refundStatus: refunded + amountPaise === order.totalPaise ? "refunded" : "pending" } : item) }, orderId, actor, "refund.completed", `${orderId}: simulated refund completed`, reason);
+  },
   merchantTransition(state: State, merchantId: string, orderId: string, action: "accept" | "reject" | "prepare" | "ready" | "delay", reason?: string) {
     const order = get(state, orderId); if (order.merchantId !== merchantId) throw Error("This order belongs to another merchant.");
     const next: Record<string, Status> = { accept: "Accepted", prepare: "Preparing", ready: "Ready", reject: "Cancelled", delay: order.status };
