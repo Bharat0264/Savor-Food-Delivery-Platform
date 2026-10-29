@@ -180,7 +180,14 @@ export type Order = {
   createdAt: string;
   rating?: number;
   feedback?: string;
+  deliveryState?: "unassigned" | "assigned" | "accepted" | "at_pickup" | "picked_up" | "at_destination" | "failed";
+  otpAttempts?: number;
+  otpExpiresAt?: string;
+  otpConsumed?: boolean;
+  cancellationReason?: string;
+  refundStatus?: "pending" | "refunded" | "failed";
 };
+export type OrderEvent = { id: string; orderId: string; actor: "customer" | "merchant" | "rider" | "admin" | "system"; type: string; message: string; createdAt: string; reason?: string };
 export type Address = { id: string; label: string; line: string; building?: string; street?: string; locality?: string; city: string; state: string; pin: string; contactName?: string; contactPhone?: string; default?: boolean };
 export type Promotion = { code: string; enabled: boolean; type: "fixed" | "percent"; valuePaise?: number; percent?: number; minOrderPaise: number; maxDiscountPaise?: number; merchantId?: string; branchId?: string; kind?: "food" | "grocery"; expiresAt?: string; usageLimit?: number; usedCount: number };
 export type PaymentAttempt = { id: string; idempotencyKey: string; orderId?: string; method: string; amountPaise: number; status: "confirmed" | "failed" | "cancelled" | "pending"; createdAt: string };
@@ -210,6 +217,7 @@ export type State = {
   promotions: Promotion[];
   paymentAttempts: PaymentAttempt[];
   checkoutKeys: string[];
+  orderEvents: OrderEvent[];
   schemaVersion: number;
   settings: { notifications: boolean; storeOpen: boolean };
 };

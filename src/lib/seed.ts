@@ -9,6 +9,7 @@ export const seed: State = {
   schemaVersion: 3,
   paymentAttempts: [],
   checkoutKeys: [],
+  orderEvents: [],
   refunds: [],
   deductionNotes: "",
   selection: { merchantId: "m1", branchId: "b1", riderId: "r1" },

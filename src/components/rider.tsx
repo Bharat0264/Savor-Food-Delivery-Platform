@@ -6,7 +6,7 @@ import { Check } from "lucide-react";
 import { useDemo } from "./provider";
 import { Empty } from "./ui";
 import { MockMap } from "./account";
-import { updateOrder, verifyDelivery } from "@/lib/repository";
+import { deliveryOperations } from "@/lib/services";
 import { brand } from "@/lib/brand";
 import { Order } from "@/lib/model";
 export function RiderApp({ tab = "" }: { tab?: string }) {
@@ -26,21 +26,12 @@ export function RiderApp({ tab = "" }: { tab?: string }) {
       toast("Your demo rider is disabled. Contact the merchant.");
       return;
     }
-    if (o.status === "Out for delivery" && otp !== o.otp) {
-      toast("That demo OTP doesn’t match. Please try again.");
-      return;
-    }
     try {
-      const updated =
-        o.status === "Ready"
-          ? updateOrder(state, o.id, "Out for delivery")
-          : verifyDelivery(state, o.id, riderId, otp);
+      const updated = o.deliveryState === "at_destination" ? deliveryOperations.verifyOtp(state, riderId, o.id, otp) : deliveryOperations.riderTransition(state, riderId, o.id, o.deliveryState === "assigned" ? "accept" : o.deliveryState === "accepted" ? "arrive_pickup" : o.deliveryState === "at_pickup" ? "pickup" : "arrive_destination");
       setState(() => updated);
       setOtp("");
       toast(
-        o.status === "Ready"
-          ? "Pickup confirmed. Your customer can follow along."
-          : "Delivery completed. A good day’s work!",
+        "Delivery progress updated.",
       );
     } catch (e) {
       toast((e as Error).message);
@@ -195,7 +186,7 @@ export function RiderApp({ tab = "" }: { tab?: string }) {
                 </div>
               </div>
               <MockMap moving={o.status === "Out for delivery"} />
-              {o.status === "Out for delivery" && (
+              {o.deliveryState === "at_destination" && (
                 <label className="field">
                   Delivery OTP
                   <input
@@ -208,12 +199,10 @@ export function RiderApp({ tab = "" }: { tab?: string }) {
                   />
                 </label>
               )}
-              {["Ready", "Out for delivery"].includes(o.status) ? (
+              {o.deliveryState && o.deliveryState !== "unassigned" && o.status !== "Delivered" ? (
                 <button className="btn full" onClick={() => act(o)}>
                   <Check size={18} />
-                  {o.status === "Ready"
-                    ? "Confirm pickup"
-                    : "Verify OTP & complete delivery"}
+                  {o.deliveryState === "at_destination" ? "Verify OTP & complete delivery" : o.deliveryState === "assigned" ? "Accept assignment" : o.deliveryState === "accepted" ? "Reached pickup" : o.deliveryState === "at_pickup" ? "Confirm pickup" : "Reached destination"}
                 </button>
               ) : (
                 o.status !== "Delivered" && (
