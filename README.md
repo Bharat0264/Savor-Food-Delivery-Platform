@@ -10,6 +10,8 @@ Milestone A returns the app to its local-first coding track: merchant registrati
 
 Milestone B adds typed, branch-aware catalog and inventory management with paise-based catalog prices, variants, add-ons, mock media metadata, and customer storefront synchronization. Read [the Milestone B implementation note](docs/MILESTONE-B.md).
 
+Milestone C makes cart, checkout, mock payments, order snapshots, and inventory deduction paise-authoritative with a safe browser-state migration. Read [the Milestone C implementation note](docs/MILESTONE-C.md).
+
 ## Run locally
 
 Use Node.js 24 and npm.

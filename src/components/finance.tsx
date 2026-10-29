@@ -1,6 +1,6 @@
 "use client";
 import { useDemo } from "./provider";
-import { money } from "@/lib/brand";
+import { moneyPaise } from "@/lib/brand";
 import { payments, settlements } from "@/lib/selectors";
 import { Order } from "@/lib/model";
 export function FinancePanel({
@@ -56,7 +56,7 @@ export function FinancePanel({
                   <td>
                     {state.merchants.find((m) => m.id === o.merchantId)?.name}
                   </td>
-                  <td>{money(o.total)}</td>
+                  <td>{moneyPaise(o.totalPaise)}</td>
                   <td>
                     <span className="status">
                       {tab === "payments"
@@ -84,7 +84,7 @@ export function FinancePanel({
                               {
                                 id: `REF-${o.id}`,
                                 orderId: o.id,
-                                amount: o.total,
+                                amountPaise: o.totalPaise,
                                 status: "Simulated",
                                 reason: "Admin demo intervention",
                               },

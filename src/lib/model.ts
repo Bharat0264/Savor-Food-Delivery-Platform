@@ -145,15 +145,24 @@ export type Rider = {
   enabled: boolean;
 };
 export type CartItem = {
+  id: string;
   productId: string;
   name: string;
-  price: number;
+  image: string;
+  variantId?: string;
+  variantName?: string;
+  addonIds: string[];
+  addonNames: string[];
+  unitPricePaise: number;
+  addonTotalPaise: number;
+  lineTotalPaise: number;
   quantity: number;
   option: string;
 };
 export type Order = {
   id: string;
   merchantId: string;
+  branchId: string;
   customerId: string;
   items: CartItem[];
   status: Status;
@@ -161,14 +170,20 @@ export type Order = {
   address: string;
   instructions: string;
   payment: string;
-  total: number;
-  discount: number;
+  subtotalPaise: number;
+  deliveryFeePaise: number;
+  taxPaise: number;
+  discountPaise: number;
+  totalPaise: number;
+  paymentStatus: "Simulated paid" | "Simulated pending" | "Simulated failed";
   otp: string;
   createdAt: string;
   rating?: number;
   feedback?: string;
 };
-export type Address = { id: string; label: string; line: string };
+export type Address = { id: string; label: string; line: string; building?: string; street?: string; locality?: string; city: string; state: string; pin: string; contactName?: string; contactPhone?: string; default?: boolean };
+export type Promotion = { code: string; enabled: boolean; type: "fixed" | "percent"; valuePaise?: number; percent?: number; minOrderPaise: number; maxDiscountPaise?: number; merchantId?: string; branchId?: string; kind?: "food" | "grocery"; expiresAt?: string; usageLimit?: number; usedCount: number };
+export type PaymentAttempt = { id: string; idempotencyKey: string; orderId?: string; method: string; amountPaise: number; status: "confirmed" | "failed" | "cancelled" | "pending"; createdAt: string };
 export type State = {
   refunds: RefundRecord[];
   deductionNotes: string;
@@ -185,14 +200,17 @@ export type State = {
   products: Product[];
   riders: Rider[];
   orders: Order[];
-  cart: { merchantId: string; items: CartItem[] };
+  cart: { merchantId: string; branchId: string; kind?: "food" | "grocery"; items: CartItem[]; createdAt?: string; updatedAt?: string };
   addresses: Address[];
   favorites: string[];
   customer: { id: string; name: string; email: string; phone: string };
   notifications: { id: string; title: string; read: boolean }[];
   support: { id: string; subject: string; status: string }[];
   audit: { id: string; message: string }[];
-  promotions: { code: string; enabled: boolean }[];
+  promotions: Promotion[];
+  paymentAttempts: PaymentAttempt[];
+  checkoutKeys: string[];
+  schemaVersion: number;
   settings: { notifications: boolean; storeOpen: boolean };
 };
 export type Customer = State["customer"];
@@ -201,7 +219,7 @@ export type PaymentRecord = {
   id: string;
   orderId: string;
   merchantId: string;
-  amount: number;
+  amountPaise: number;
   method: string;
   status: "Simulated paid" | "Simulated refunded" | "Simulated voided";
 };
@@ -209,7 +227,7 @@ export type SettlementRecord = {
   id: string;
   orderId: string;
   merchantId: string;
-  gross: number;
+  grossPaise: number;
   deductions: null;
   net: null;
   scheduledAt: string;
@@ -225,7 +243,7 @@ export type Review = {
 export type RefundRecord = {
   id: string;
   orderId: string;
-  amount: number;
+  amountPaise: number;
   status: "Simulated";
   reason: string;
 };

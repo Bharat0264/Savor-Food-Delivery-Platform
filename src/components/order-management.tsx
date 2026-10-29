@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useDemo } from "./provider";
 import { Modal } from "./ui";
-import { money } from "@/lib/brand";
+import { moneyPaise } from "@/lib/brand";
 import { Order, Product, Status } from "@/lib/model";
 import { nextStatus } from "@/lib/repository";
 export function OrderTable({
@@ -45,7 +45,7 @@ export function OrderTable({
                   {state.merchants.find((m) => m.id === o.merchantId)?.name}
                 </td>
                 <td>{o.items.reduce((n, i) => n + i.quantity, 0)} items</td>
-                <td>{money(o.total)}</td>
+                <td>{moneyPaise(o.totalPaise)}</td>
                 <td>
                   <span className="status">{o.status}</span>
                 </td>
@@ -97,12 +97,12 @@ export function OrderDetail({
             {i.quantity} × {i.name}
             <small>{i.option}</small>
           </span>
-          <b>{money(i.price * i.quantity)}</b>
+          <b>{moneyPaise(i.lineTotalPaise)}</b>
         </div>
       ))}
       <div className="summary-line total">
         <b>Total</b>
-        <b>{money(o.total)}</b>
+        <b>{moneyPaise(o.totalPaise)}</b>
       </div>
       <label className="field">
         Assign / reassign delivery partner

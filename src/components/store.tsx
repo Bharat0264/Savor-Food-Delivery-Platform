@@ -5,10 +5,9 @@ import { Clock, Leaf, MapPin, Minus, Plus, Search, ShoppingBag, Star } from "luc
 import { motion } from "motion/react";
 import { useDemo } from "./provider";
 import { Empty, Modal } from "./ui";
-import { CartItem, Product } from "@/lib/model";
+import { Product } from "@/lib/model";
 import { moneyPaise } from "@/lib/brand";
-import { addCartItem } from "@/lib/repository";
-import { catalogForBranch } from "@/lib/services";
+import { cartService, catalogForBranch, type CartSelection } from "@/lib/services";
 
 type Selection = { variantId?: string; addons: Record<string, string[]>; quantity: number };
 
@@ -19,7 +18,7 @@ export function Store({ id }: { id: string }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [selection, setSelection] = useState<Selection>({ addons: {}, quantity: 1 });
   const [validation, setValidation] = useState("");
-  const [pending, setPending] = useState<CartItem | null>(null);
+  const [pending, setPending] = useState<CartSelection | null>(null);
   const merchant = state.merchants.find((m) => m.id === id);
   const branch = state.branches.find((item) => item.id === state.selection.branchId && item.merchantId === id) ?? state.branches.find((item) => item.merchantId === id);
   const products = useMemo(() => (branch ? catalogForBranch(state, id, branch.id) : []), [branch, id, state]);
@@ -37,8 +36,8 @@ export function Store({ id }: { id: string }) {
     const selected = Object.values(selection.addons).flat();
     return (variant?.pricePaise ?? product.pricePaise) + product.customizationGroups.flatMap((group) => group.addons).filter((addon) => selected.includes(addon.id)).reduce((sum, addon) => sum + addon.pricePaise, 0);
   };
-  const commit = (item: CartItem, replace = false) => {
-    setState((current) => addCartItem(current, id, item, replace));
+  const commit = (item: CartSelection, replace = false) => {
+    setState((current) => cartService.add(current, id, branch.id, item, replace));
     setProduct(null); setPending(null); toast("A little goodness added to your bag");
   };
   const add = () => {
@@ -52,9 +51,8 @@ export function Store({ id }: { id: string }) {
     }
     const variant = product.variants.find((item) => item.id === selection.variantId);
     const selected = Object.values(selection.addons).flat();
-    const addonNames = product.customizationGroups.flatMap((group) => group.addons).filter((addon) => selected.includes(addon.id)).map((addon) => addon.name);
-    const item = { productId: product.id, name: product.name, price: unitPrice() / 100, quantity: selection.quantity, option: [variant?.name, ...addonNames].filter(Boolean).join(" + ") || "Standard" };
-    if (state.cart.items.length && state.cart.merchantId !== id) setPending(item); else commit(item);
+    const item = { productId: product.id, variantId: variant?.id, addonIds: selected, quantity: selection.quantity };
+    if (state.cart.items.length && (state.cart.merchantId !== id || state.cart.branchId !== branch.id)) setPending(item); else commit(item);
   };
   const visible = products.filter((item) => (category === "All" || item.category === category) && item.name.toLowerCase().includes(search.toLowerCase()));
   return <>

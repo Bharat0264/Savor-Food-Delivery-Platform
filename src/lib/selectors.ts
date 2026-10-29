@@ -33,7 +33,7 @@ export const payments = (state: State): PaymentRecord[] =>
     id: `PAY-${o.id}`,
     orderId: o.id,
     merchantId: o.merchantId,
-    amount: o.total,
+    amountPaise: o.totalPaise,
     method: o.payment,
     status: state.refunds.some((r) => r.orderId === o.id)
       ? "Simulated refunded"
@@ -46,7 +46,7 @@ export const settlements = (state: State): SettlementRecord[] =>
     id: `SET-${o.id}`,
     orderId: o.id,
     merchantId: o.merchantId,
-    gross: o.total,
+    grossPaise: o.totalPaise,
     deductions: null,
     net: null,
     scheduledAt: new Date(

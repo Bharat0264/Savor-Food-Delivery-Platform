@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useDemo } from "./provider";
 import { Empty, MerchantCard, Modal } from "./ui";
-import { money } from "@/lib/brand";
+import { moneyPaise } from "@/lib/brand";
 export function MockMap({ moving = false }: { moving?: boolean }) {
   return (
     <div className="mock-map">
@@ -190,12 +190,12 @@ export function Tracking({ id }: { id: string }) {
                 <span>
                   {i.quantity} × {i.name}
                 </span>
-                <b>{money(i.price * i.quantity)}</b>
+                <b>{moneyPaise(i.lineTotalPaise)}</b>
               </div>
             ))}
             <div className="summary-line total">
               <b>Total · {order.payment}</b>
-              <b>{money(order.total)}</b>
+              <b>{moneyPaise(order.totalPaise)}</b>
             </div>
           </div>
           {order.status === "Delivered" && (
@@ -369,7 +369,7 @@ export function Account({ tab = "profile" }: { tab?: string }) {
                     ...s,
                     addresses: [
                       ...s.addresses,
-                      { id: crypto.randomUUID(), label, line },
+                      { id: crypto.randomUUID(), label, line, city: "Bengaluru", state: "Karnataka", pin: "560001" },
                     ],
                   }));
                   setLine("");
@@ -422,7 +422,7 @@ export function Account({ tab = "profile" }: { tab?: string }) {
                       </small>
                     </div>
                     <span className="status">{o.status}</span>
-                    <b>{money(o.total)}</b>
+                    <b>{moneyPaise(o.totalPaise)}</b>
                     <ArrowUpRight size={17} />
                   </Link>
                 ))}

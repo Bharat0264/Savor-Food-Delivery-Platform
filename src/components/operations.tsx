@@ -43,7 +43,7 @@ import {
   MerchantDirectory,
   MerchantProfileEditor,
 } from "./merchant-management";
-import { money, brand } from "@/lib/brand";
+import { moneyPaise, brand } from "@/lib/brand";
 import { updateOrder } from "@/lib/repository";
 import { customers, managers, settlements } from "@/lib/selectors";
 import { Order, Status } from "@/lib/model";
@@ -130,7 +130,7 @@ export function Operations({
   const title = nav.find((n) => n[1] === tab)?.[0] || "Overview";
   const gross = orders
     .filter((o) => o.status === "Delivered")
-    .reduce((n, o) => n + o.total, 0);
+    .reduce((n, o) => n + o.totalPaise, 0);
   const act = (id: string, status: Status, riderId?: string) => {
     try {
       const updated = updateOrder(state, id, status, riderId);
@@ -149,7 +149,7 @@ export function Operations({
       ledger
         .map(
           (r) =>
-            `${r.id},${r.orderId},${r.merchantId},${r.gross},Not configured,Not calculated,${r.status},${r.scheduledAt}`,
+            `${r.id},${r.orderId},${r.merchantId},${r.grossPaise},Not configured,Not calculated,${r.status},${r.scheduledAt}`,
         )
         .join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
@@ -274,7 +274,7 @@ export function Operations({
               {[
                 [
                   admin ? "Delivered order value" : "Delivered sales",
-                  money(gross),
+                  moneyPaise(gross),
                   "From completed demo orders",
                 ],
                 [
@@ -337,7 +337,7 @@ export function Operations({
                                 o.createdAt.slice(0, 10) === date &&
                                 o.status !== "Cancelled",
                             )
-                            .reduce((n, o) => n + o.total, 0),
+                            .reduce((n, o) => n + o.totalPaise, 0),
                         };
                       })}
                     >

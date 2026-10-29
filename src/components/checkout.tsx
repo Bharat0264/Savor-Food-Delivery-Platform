@@ -5,67 +5,44 @@ import { useRouter } from "next/navigation";
 import { ArrowUpRight, Plus, Minus, Check, MapPin } from "lucide-react";
 import { useDemo } from "./provider";
 import { Empty } from "./ui";
-import { money } from "@/lib/brand";
-import { orderTotal, placeOrder } from "@/lib/repository";
+import { moneyPaise } from "@/lib/brand";
+import { cartService, checkoutService, quoteCart } from "@/lib/services";
 import { CartEditor } from "./cart-editor";
 export function Checkout() {
   const { state, setState, toast } = useDemo();
   const router = useRouter();
   const [address, setAddress] = useState(state.addresses[0]?.id || "");
   const [promo, setPromo] = useState("");
-  const [discount, setDiscount] = useState(0);
   const [instructions, setInstructions] = useState("");
   const [payment, setPayment] = useState("Demo UPI");
   const [failure, setFailure] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const cart = state.cart;
-  const subtotal = cart.items.reduce((n, i) => n + i.price * i.quantity, 0);
-  const effectiveDiscount = subtotal >= 499 ? discount : 0;
+  let quote;
+  try { quote = quoteCart(state, promo || undefined); } catch { quote = { subtotalPaise: cart.items.reduce((n, i) => n + i.lineTotalPaise, 0), deliveryFeePaise: 4000, taxPaise: 0, discountPaise: 0, totalPaise: cart.items.reduce((n, i) => n + i.lineTotalPaise, 0) + 4000, priceChanged: false }; }
   const quantity = (index: number, delta: number) =>
-    setState((s) => ({
-      ...s,
-      cart: {
-        ...s.cart,
-        items: s.cart.items
-          .map((i, j) =>
-            j === index ? { ...i, quantity: i.quantity + delta } : i,
-          )
-          .filter((i) => i.quantity > 0),
-      },
-    }));
+    setState((s) => cartService.setQuantity(s, s.cart.items[index].id, s.cart.items[index].quantity + delta));
   async function place() {
     if (!state.addresses.some((a) => a.id === address)) {
       toast("Choose a delivery address");
       return;
     }
-    if (
-      cart.items.some(
-        (i) =>
-          (state.products.find((p) => p.id === i.productId)?.stock || 0) <
-          i.quantity,
-      )
-    ) {
-      toast("An item is no longer available in that quantity.");
-      return;
-    }
     setPlacing(true);
     await new Promise((r) => setTimeout(r, 650));
-    if (failure) {
-      setPlacing(false);
-      toast("Simulated payment failure. Your bag is safe; try again.");
-      return;
-    }
     try {
-      const result = placeOrder(state, {
+      const result = checkoutService.place(state, {
         addressId: address,
         instructions,
-        payment,
-        discount: effectiveDiscount,
+        paymentMethod: payment,
+        idempotencyKey: crypto.randomUUID(),
+        promotionCode: promo || undefined,
+        paymentOutcome: failure ? "failure" : "success",
         now: new Date().toISOString(),
       });
+      if (!result.orderId) { setState(() => result.state); setPlacing(false); toast("Simulated payment failure. Your bag is safe; try again."); return; }
       setState(() => result.state);
-      router.push(`/orders/${result.order.id}?confirmed=1`);
+      router.push(`/orders/${result.orderId}?confirmed=1`);
     } catch (error) {
       toast((error as Error).message);
       setPlacing(false);
@@ -132,10 +109,11 @@ export function Checkout() {
                     <Plus size={14} />
                   </button>
                 </div>
-                <b>{money(i.price * i.quantity)}</b>
+                <b>{moneyPaise(i.lineTotalPaise)}</b>
               </div>
             ))}
           </div>
+          {quote.priceChanged && <div className="panel"><p className="form-error">A catalog price changed since this item was added. Review the refreshed total before placing your order.</p></div>}
           <div className="panel">
             <h2>
               <MapPin size={21} /> Deliver to your happy place
@@ -205,10 +183,8 @@ export function Checkout() {
               onClick={() => {
                 if (
                   promo.toUpperCase() === "FIRSTBITE" &&
-                  subtotal >= 499 &&
-                  state.promotions.find((p) => p.code === "FIRSTBITE")?.enabled
+                  quote.discountPaise > 0
                 ) {
-                  setDiscount(100);
                   toast("₹100 of first-bite happiness applied");
                 } else toast("Use FIRSTBITE on a subtotal of ₹499 or more.");
               }}
@@ -219,22 +195,22 @@ export function Checkout() {
           <dl>
             <div>
               <dt>Item total</dt>
-              <dd>{money(subtotal)}</dd>
+              <dd>{moneyPaise(quote.subtotalPaise)}</dd>
             </div>
             <div>
               <dt>Delivery</dt>
-              <dd>₹40</dd>
+              <dd>{moneyPaise(quote.deliveryFeePaise)}</dd>
             </div>
             <div>
               <dt>Discount</dt>
-              <dd>− {money(effectiveDiscount)}</dd>
+              <dd>− {moneyPaise(quote.discountPaise)}</dd>
             </div>
             <div className="total">
               <dt>To pay</dt>
-              <dd>{money(orderTotal(cart.items, effectiveDiscount))}</dd>
+              <dd>{moneyPaise(quote.totalPaise)}</dd>
             </div>
           </dl>
-          <button className="btn full" disabled={placing} onClick={place}>
+          <button className="btn full" disabled={placing || quote.priceChanged} onClick={place}>
             {placing ? "Placing your demo order…" : "Place demo order"}
             <ArrowUpRight size={18} />
           </button>

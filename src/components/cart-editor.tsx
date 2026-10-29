@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Modal } from "./ui";
 import { useDemo } from "./provider";
-import { money } from "@/lib/brand";
+import { moneyPaise } from "@/lib/brand";
 export function CartEditor({
   index,
   onClose,
@@ -13,43 +13,32 @@ export function CartEditor({
   const { state, setState, toast } = useDemo();
   const item = state.cart.items[index];
   const product = state.products.find((p) => p.id === item?.productId);
-  const food =
-    state.merchants.find((m) => m.id === state.cart.merchantId)?.kind ===
-    "food";
-  const [option, setOption] = useState(
-    item?.option.split(" + ")[0] || "Regular",
-  );
-  const [addon, setAddon] = useState(
-    item?.option.includes("extra topping") || false,
-  );
+  const [option, setOption] = useState(item?.variantName || "Standard");
+  const [addon, setAddon] = useState((item?.addonNames.length || 0) > 0);
   if (!item || !product) return null;
-  const surcharge = ["Large", "Family pack"].includes(option) ? 70 : 0;
-  const price = product.price + surcharge + (addon ? 40 : 0);
+  const pricePaise = item.unitPricePaise + (addon ? item.addonTotalPaise : 0);
   return (
     <Modal title={`Customize ${item.name}`} onClose={onClose}>
       <p>Update this item in your current bag.</p>
-      {(food ? ["Regular", "Large"] : ["Standard", "Family pack"]).map((o) => (
-        <label className="radio-row" key={o}>
+      {product.variants.filter((variant) => variant.active).map((variant) => (
+        <label className="radio-row" key={variant.id}>
           <input
             type="radio"
             name="cart-variation"
-            checked={option === o}
-            onChange={() => setOption(o)}
+          checked={option === variant.name}
+            onChange={() => setOption(variant.name)}
           />
-          {o}
-          <span>
-            {["Large", "Family pack"].includes(o) ? "+ ₹70" : "Included"}
-          </span>
+          {variant.name}<span>{moneyPaise(variant.pricePaise)}</span>
         </label>
       ))}
-      {food && (
+      {item.addonNames.length > 0 && (
         <label className="radio-row">
           <input
             type="checkbox"
             checked={addon}
             onChange={(e) => setAddon(e.target.checked)}
           />
-          Extra topping<span>+ ₹40</span>
+          Keep selected add-ons<span>+ {moneyPaise(item.addonTotalPaise)}</span>
         </label>
       )}
       <button
@@ -61,11 +50,7 @@ export function CartEditor({
               ...s.cart,
               items: s.cart.items.map((i, j) =>
                 j === index
-                  ? {
-                      ...i,
-                      option: option + (addon ? " + extra topping" : ""),
-                      price,
-                    }
+                  ? { ...i, option: option + (addon ? ` + ${item.addonNames.join(" + ")}` : ""), variantName: option, addonTotalPaise: addon ? item.addonTotalPaise : 0, lineTotalPaise: pricePaise * i.quantity }
                   : i,
               ),
             },
@@ -74,7 +59,7 @@ export function CartEditor({
           onClose();
         }}
       >
-        Save · {money(price)} each
+        Save · {moneyPaise(pricePaise)} each
       </button>
     </Modal>
   );
