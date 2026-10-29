@@ -18,3 +18,4 @@ export const money = (n: number) =>
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(n);
+export const moneyPaise = (paise: number) => money(paise / 100);

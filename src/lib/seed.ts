@@ -3,6 +3,8 @@ const food = "/images/food.jpg",
   pizza = "/images/pizza.jpg",
   salad = "/images/salad.jpg",
   grocery = "/images/grocery.jpg";
+const catalogPrice = (kind: "food" | "grocery", index: number) =>
+  (kind === "grocery" ? [149, 89, 65, 180, 72, 120] : [289, 329, 349, 179, 129, 199])[index];
 export const seed: State = {
   refunds: [],
   deductionNotes: "",
@@ -96,6 +98,12 @@ export const seed: State = {
     },
   ],
   branches: [],
+  catalogCategories: [],
+  branchCatalog: [],
+  inventory: [],
+  stockAdjustments: [],
+  catalogMedia: [],
+  catalogAudit: [],
   merchantManagers: [
     { id: "manager-m1", name: "Meera Rao", merchantId: "m1", branchIds: ["b1"], active: true },
     { id: "manager-m2", name: "Dev Kapoor", merchantId: "m2", branchIds: ["b2"], active: true },
@@ -283,10 +291,8 @@ seed.products = seed.merchants.flatMap((m, mi) =>
         "Soft milk dumplings in fragrant sugar syrup.",
       ],
     ][mi][i],
-    price:
-      m.kind === "grocery"
-        ? [149, 89, 65, 180, 72, 120][i]
-        : [289, 329, 349, 179, 129, 199][i],
+    price: catalogPrice(m.kind, i),
+    pricePaise: catalogPrice(m.kind, i) * 100,
     stock: i === 5 ? 0 : 24,
     category:
       m.kind === "grocery"
@@ -314,7 +320,64 @@ seed.products = seed.merchants.flatMap((m, mi) =>
           )[i]
         : m.image,
     vegetarian: true,
+    archived: false,
+    available: i !== 5,
+    preparationMinutes: m.kind === "food" ? 18 + i * 2 : undefined,
+    variants:
+      i === 0
+        ? m.kind === "food"
+          ? [
+              { id: `v${mi}${i}-regular`, name: "Regular", pricePaise: catalogPrice(m.kind, i) * 100, active: true },
+              { id: `v${mi}${i}-large`, name: "Large", pricePaise: (catalogPrice(m.kind, i) + 70) * 100, active: true },
+            ]
+          : [
+              { id: `v${mi}${i}-standard`, name: "Standard", pricePaise: catalogPrice(m.kind, i) * 100, active: true, unit: "1 pack" },
+              { id: `v${mi}${i}-family`, name: "Family pack", pricePaise: (catalogPrice(m.kind, i) + 70) * 100, active: true, unit: "2 packs" },
+            ]
+        : [],
+    customizationGroups:
+      m.kind === "food" && i === 0
+        ? [
+            {
+              id: `cg${mi}${i}`,
+              name: "Finish it your way",
+              required: false,
+              minSelections: 0,
+              maxSelections: 2,
+              addons: [
+                { id: `a${mi}${i}-avocado`, name: "Extra avocado", pricePaise: 4000, active: true },
+                { id: `a${mi}${i}-raita`, name: "Cooling raita", pricePaise: 2000, active: true },
+              ],
+            },
+          ]
+        : [],
   })),
+);
+seed.catalogCategories = seed.merchants.flatMap((merchant) =>
+  [...new Set(seed.products.filter((product) => product.merchantId === merchant.id).map((product) => product.category))].map(
+    (name, sortOrder) => ({
+      id: `category-${merchant.id}-${sortOrder}`,
+      merchantId: merchant.id,
+      kind: merchant.kind,
+      name,
+      department: merchant.kind === "grocery" ? name : undefined,
+      sortOrder,
+      archived: false,
+    }),
+  ),
+);
+seed.inventory = seed.branches.flatMap((branch) =>
+  seed.products
+    .filter((product) => product.merchantId === branch.merchantId)
+    .map((product) => ({
+      id: `inventory-${branch.id}-${product.id}`,
+      merchantId: branch.merchantId,
+      branchId: branch.id,
+      productId: product.id,
+      quantity: product.stock,
+      lowStockThreshold: 5,
+      enabled: product.available,
+    })),
 );
 seed.orders = [
   {

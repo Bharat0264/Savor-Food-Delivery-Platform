@@ -29,11 +29,25 @@ export const repository: DemoRepository = {
         },
         branches: data.branches || freshSeed().branches,
         merchantManagers: data.merchantManagers || freshSeed().merchantManagers,
+        catalogCategories: data.catalogCategories || freshSeed().catalogCategories,
+        branchCatalog: data.branchCatalog || [],
+        inventory: data.inventory || freshSeed().inventory,
+        stockAdjustments: data.stockAdjustments || [],
+        catalogMedia: data.catalogMedia || [],
+        catalogAudit: data.catalogAudit || [],
         merchants: data.merchants.map((m: State["merchants"][number]) => ({
           ...m,
           open: m.open ?? true,
           lifecycle:
             m.lifecycle || (m.approved ? "approved" : "pending"),
+        })),
+        products: data.products.map((product: State["products"][number]) => ({
+          ...product,
+          pricePaise: product.pricePaise ?? product.price * 100,
+          archived: product.archived ?? false,
+          available: product.available ?? product.stock > 0,
+          variants: product.variants || [],
+          customizationGroups: product.customizationGroups || [],
         })),
       } as State;
     } catch {

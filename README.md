@@ -8,6 +8,8 @@ Phase 2 Stage 2 adds database-backed role helpers, least-privilege grants, RLS p
 
 Milestone A returns the app to its local-first coding track: merchant registration, approval, suspension, multi-branch management, branch-scoped manager access, business hours, and shared local audit events now flow through a typed domain service. Read [the Milestone A implementation note](docs/MILESTONE-A.md).
 
+Milestone B adds typed, branch-aware catalog and inventory management with paise-based catalog prices, variants, add-ons, mock media metadata, and customer storefront synchronization. Read [the Milestone B implementation note](docs/MILESTONE-B.md).
+
 ## Run locally
 
 Use Node.js 24 and npm.
@@ -52,6 +54,7 @@ src/components/
   account.tsx           Profile, addresses, history, favorites, support, tracking
   operations.tsx        Merchant/admin workspaces and analytics
   merchant-management.tsx Merchant/branch profile and manager controls
+  catalog-management.tsx Merchant/admin catalog, inventory and product controls
   order-management.tsx Order table, assignment and product editor
   finance.tsx           Simulated ledger, settlements and refunds
   rider-management.tsx Rider creation, availability and memberships
@@ -93,7 +96,7 @@ WebGL is dynamically loaded, capped at 1.5 DPR and unmounted outside the hero vi
 
 The same order travels through checkout, merchant acceptance/preparation/assignment, rider pickup and OTP delivery, customer history/review, and admin reporting. Single-merchant carts require confirmation before replacement. Stock checks aggregate variants, rider assignments enforce membership and prevent double-booking, and cancellation restocks at most once. Shared data persists in browser storage; multiple tabs on the same origin synchronize changes.
 
-Additional interactions: search/filter/sort, favorites, cart customization, addresses, profile edits, promos, simulated payment failures, support cases, catalog price/stock editing, merchant registration/approval/suspension, multi-branch management, branch-scoped manager assignment, rider registration/disable/removal, reassignment, notification read state, demo refunds, and CSV statements.
+Additional interactions: search/filter/sort, catalog category ordering, variants, add-ons, branch pricing, stock warnings and inventory adjustments, favorites, cart customization, addresses, profile edits, promos, simulated payment failures, support cases, merchant registration/approval/suspension, multi-branch management, branch-scoped manager assignment, rider registration/disable/removal, reassignment, notification read state, demo refunds, and CSV statements.
 
 Follow [the complete walkthrough](docs/DEMO-WALKTHROUGH.md).
 

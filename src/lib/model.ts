@@ -53,6 +53,89 @@ export type Product = {
   category: string;
   image: string;
   vegetarian: boolean;
+  /** Catalog authority is paise; `price` remains a temporary cart-compatible rupee projection. */
+  pricePaise: number;
+  mrpPaise?: number;
+  archived: boolean;
+  available: boolean;
+  preparationMinutes?: number;
+  variants: ProductVariant[];
+  customizationGroups: ProductCustomizationGroup[];
+  mediaId?: string;
+};
+export type CatalogCategory = {
+  id: string;
+  merchantId: string;
+  kind: "food" | "grocery";
+  name: string;
+  department?: string;
+  sortOrder: number;
+  archived: boolean;
+};
+export type ProductVariant = {
+  id: string;
+  name: string;
+  pricePaise: number;
+  mrpPaise?: number;
+  unit?: string;
+  active: boolean;
+};
+export type CatalogAddon = {
+  id: string;
+  name: string;
+  pricePaise: number;
+  active: boolean;
+};
+export type ProductCustomizationGroup = {
+  id: string;
+  name: string;
+  required: boolean;
+  minSelections: number;
+  maxSelections: number;
+  addons: CatalogAddon[];
+};
+export type BranchCatalogOverride = {
+  id: string;
+  merchantId: string;
+  branchId: string;
+  productId: string;
+  variantId?: string;
+  available: boolean;
+  pricePaise?: number;
+};
+export type InventoryRecord = {
+  id: string;
+  merchantId: string;
+  branchId: string;
+  productId: string;
+  variantId?: string;
+  quantity: number;
+  lowStockThreshold: number;
+  enabled: boolean;
+};
+export type StockAdjustment = {
+  id: string;
+  inventoryId: string;
+  delta: number;
+  reason: string;
+  createdAt: string;
+};
+export type CatalogMedia = {
+  id: string;
+  merchantId: string;
+  filename: string;
+  url: string;
+  sizeBytes: number;
+  contentType: string;
+};
+export type CatalogAuditEvent = {
+  id: string;
+  merchantId: string;
+  branchId?: string;
+  action: string;
+  entityId: string;
+  message: string;
+  createdAt: string;
 };
 export type Rider = {
   id: string;
@@ -93,6 +176,12 @@ export type State = {
   merchants: Merchant[];
   branches: Branch[];
   merchantManagers: MerchantManager[];
+  catalogCategories: CatalogCategory[];
+  branchCatalog: BranchCatalogOverride[];
+  inventory: InventoryRecord[];
+  stockAdjustments: StockAdjustment[];
+  catalogMedia: CatalogMedia[];
+  catalogAudit: CatalogAuditEvent[];
   products: Product[];
   riders: Rider[];
   orders: Order[];

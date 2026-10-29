@@ -9,7 +9,6 @@ import {
   Wallet,
   Settings,
   ArrowUpRight,
-  Plus,
   Search,
   Activity,
   Users,
@@ -37,7 +36,8 @@ import { useDemo } from "./provider";
 import { Modal } from "./ui";
 import { FinancePanel } from "./finance";
 import { RiderManagement } from "./rider-management";
-import { OrderTable, OrderDetail, ProductEditor } from "./order-management";
+import { OrderTable, OrderDetail } from "./order-management";
+import { CatalogManagement } from "./catalog-management";
 import {
   BranchManagement,
   MerchantDirectory,
@@ -46,7 +46,7 @@ import {
 import { money, brand } from "@/lib/brand";
 import { updateOrder } from "@/lib/repository";
 import { customers, managers, settlements } from "@/lib/selectors";
-import { Order, Product, Status } from "@/lib/model";
+import { Order, Status } from "@/lib/model";
 const merchantNav = [
   ["Overview", "", LayoutDashboard],
   ["Orders", "orders", Package],
@@ -115,7 +115,6 @@ export function Operations({
     });
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
-  const [editing, setEditing] = useState<Product | null>(null);
   const [detail, setDetail] = useState<Order | null>(null);
   const admin = role === "admin";
   const merchants = admin
@@ -123,9 +122,6 @@ export function Operations({
     : state.merchants.filter((m) => m.id === merchantId);
   const orders = state.orders.filter(
     (o) => admin || o.merchantId === merchantId,
-  );
-  const products = state.products.filter(
-    (p) => admin || p.merchantId === merchantId,
   );
   const riders = state.riders.filter(
     (r) => admin || r.merchantIds.includes(merchantId),
@@ -262,27 +258,7 @@ export function Operations({
                   (admin ? "marketplace." : "store today.")}
             </p>
           </div>
-          {tab === "products" ? (
-            <button
-              className="btn"
-              onClick={() =>
-                setEditing({
-                  id: crypto.randomUUID(),
-                  merchantId: admin ? "m1" : merchantId,
-                  name: "",
-                  description: "",
-                  price: 100,
-                  stock: 20,
-                  category: "New arrivals",
-                  image: "/images/food.jpg",
-                  vegetarian: true,
-                })
-              }
-            >
-              <Plus size={16} />
-              Add product
-            </button>
-          ) : (
+          {tab !== "products" && (
             <button className="btn light" onClick={exportStatement}>
               Export statement <ArrowUpRight size={16} />
             </button>
@@ -485,85 +461,7 @@ export function Operations({
             />
           </>
         )}
-        {tab === "products" && (
-          <div className="ops-panel">
-            <div className="searchbox">
-              <Search size={17} />
-              <input
-                aria-label="Search products"
-                placeholder="Search your catalog…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Merchant</th>
-                    <th>Price</th>
-                    <th>Stock</th>
-                    <th>Availability</th>
-                    <th>Manage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products
-                    .filter((p) =>
-                      p.name.toLowerCase().includes(query.toLowerCase()),
-                    )
-                    .map((p) => (
-                      <tr key={p.id}>
-                        <td>
-                          <div className="table-product">
-                            <img src={p.image} alt="" />
-                            <span>
-                              {p.name}
-                              <small>{p.category}</small>
-                            </span>
-                          </div>
-                        </td>
-                        <td>
-                          {
-                            state.merchants.find((m) => m.id === p.merchantId)
-                              ?.name
-                          }
-                        </td>
-                        <td>{money(p.price)}</td>
-                        <td>{p.stock}</td>
-                        <td>
-                          <button
-                            className={`status ${p.stock ? "" : "muted"}`}
-                            onClick={() =>
-                              setState((s) => ({
-                                ...s,
-                                products: s.products.map((x) =>
-                                  x.id === p.id
-                                    ? { ...x, stock: x.stock ? 0 : 20 }
-                                    : x,
-                                ),
-                              }))
-                            }
-                          >
-                            {p.stock ? "In stock" : "Unavailable"}
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            className="text-link"
-                            onClick={() => setEditing(p)}
-                          >
-                            Edit →
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        {tab === "products" && <CatalogManagement merchantId={merchantId} branchId={branchId} admin={admin} />}
         {tab === "riders" && (
           <RiderManagement admin={admin} merchantId={merchantId} />
         )}
@@ -760,13 +658,6 @@ export function Operations({
           </>
         )}
       </div>
-      {editing && (
-        <ProductEditor
-          canSelectMerchant={admin}
-          product={editing}
-          onClose={() => setEditing(null)}
-        />
-      )}
       {detail && (
         <Modal title={`Order ${detail.id}`} onClose={() => setDetail(null)}>
           <OrderDetail
