@@ -10,6 +10,7 @@ export const seed: State = {
   paymentAttempts: [],
   checkoutKeys: [],
   orderEvents: [],
+  riderMemberships: [],
   refunds: [],
   deductionNotes: "",
   selection: { merchantId: "m1", branchId: "b1", riderId: "r1" },
@@ -192,6 +193,7 @@ seed.branches = seed.merchants.map((merchant, index) => ({
   deliveryAvailable: merchant.approved,
   hours: everydayHours(),
 }));
+seed.riderMemberships = seed.riders.flatMap((rider) => rider.merchantIds.map((merchantId) => ({ id: `membership-${rider.id}-${merchantId}`, riderId: rider.id, merchantId, branchIds: [seed.branches.find((branch) => branch.merchantId === merchantId)!.id], status: "active" as const, createdAt: "2026-10-01T00:00:00.000Z" })));
 const menus = [
   [
     "Sesame sunshine bowl",

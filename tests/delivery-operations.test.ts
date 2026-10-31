@@ -2,6 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { freshSeed } from "../src/lib/seed";
 import { deliveryOperations } from "../src/lib/services";
+import { riderManagementService } from "../src/lib/services";
+
+test("merchant rider memberships scope branches and suspension", () => {
+  let state = riderManagementService.create(freshSeed(), "merchant", "m1", { name: "Neha Das", phone: "9000000000" }, ["b1"]);
+  const rider = state.riders.find((item) => item.name === "Neha Das")!; const membership = state.riderMemberships.find((item) => item.riderId === rider.id)!;
+  assert.equal(rider.branchIds?.[0], "b1");
+  state = riderManagementService.setMembershipStatus(state, "merchant", membership.id, "suspended");
+  assert.equal(state.riders.find((item) => item.id === rider.id)?.enabled, false);
+  assert.throws(() => riderManagementService.create(state, "merchant", "m1", { name: "Invalid" }, ["b2"]), /branches/);
+});
 
 test("order delivery lifecycle validates merchant, rider, and OTP steps", () => {
   let state = freshSeed();

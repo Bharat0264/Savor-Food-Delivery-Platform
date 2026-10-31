@@ -11,3 +11,4 @@ export type {
 export { addressService, cartService, checkoutService, quoteCart, DEMO_DELIVERY_FEE_PAISE } from "./commerce";
 export type { CartSelection, CheckoutQuote, CheckoutRequest } from "./commerce";
 export { deliveryOperations } from "./delivery-operations";
+export { riderManagementService } from "./rider-management";

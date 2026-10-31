@@ -143,7 +143,11 @@ export type Rider = {
   merchantIds: string[];
   availability: "Available" | "Busy" | "Offline";
   enabled: boolean;
+  phone?: string;
+  status?: "active" | "suspended" | "archived";
+  branchIds?: string[];
 };
+export type RiderMembership = { id: string; riderId: string; merchantId: string; branchIds: string[]; status: "active" | "suspended" | "archived"; createdAt: string };
 export type CartItem = {
   id: string;
   productId: string;
@@ -218,11 +222,11 @@ export type State = {
   paymentAttempts: PaymentAttempt[];
   checkoutKeys: string[];
   orderEvents: OrderEvent[];
+  riderMemberships: RiderMembership[];
   schemaVersion: number;
   settings: { notifications: boolean; storeOpen: boolean };
 };
 export type Customer = State["customer"];
-export type RiderMembership = { riderId: string; merchantId: string };
 export type PaymentRecord = {
   id: string;
   orderId: string;

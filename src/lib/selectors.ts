@@ -24,10 +24,7 @@ export const customers = (state: State): Customer[] => [
 ];
 export const managers = (state: State): MerchantManager[] =>
   state.merchantManagers;
-export const memberships = (state: State): RiderMembership[] =>
-  state.riders.flatMap((r) =>
-    r.merchantIds.map((merchantId) => ({ merchantId, riderId: r.id })),
-  );
+export const memberships = (state: State): RiderMembership[] => state.riderMemberships || [];
 export const payments = (state: State): PaymentRecord[] =>
   state.orders.map((o) => ({
     id: `PAY-${o.id}`,

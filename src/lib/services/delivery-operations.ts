@@ -30,7 +30,7 @@ export const deliveryOperations = {
   assign(state: State, actor: "merchant" | "admin", merchantId: string, orderId: string, riderId: string) {
     const order = get(state, orderId); const rider = state.riders.find((item) => item.id === riderId);
     if (actor === "merchant" && order.merchantId !== merchantId) throw Error("This order belongs to another merchant.");
-    if (order.status !== "Ready" || !rider?.enabled || rider.availability !== "Available" || !rider.merchantIds.includes(order.merchantId) || state.orders.some((item) => item.id !== orderId && item.riderId === riderId && !["Delivered", "Cancelled"].includes(item.status))) throw Error("Choose an eligible available rider for a ready order.");
+    if (order.status !== "Ready" || !rider?.enabled || rider.availability !== "Available" || !(state.riderMemberships || []).some((membership) => membership.riderId === riderId && membership.merchantId === order.merchantId && membership.status === "active" && membership.branchIds.includes(order.branchId)) || state.orders.some((item) => item.id !== orderId && item.riderId === riderId && !["Delivered", "Cancelled"].includes(item.status))) throw Error("Choose an eligible available rider for a ready order.");
     const riders = state.riders.map((item) => item.id === riderId ? { ...item, availability: "Busy" as const } : item);
     return event({ ...state, riders, orders: state.orders.map((item) => item.id === orderId ? { ...item, riderId, deliveryState: "assigned", otpExpiresAt: new Date(Date.now() + 30 * 60_000).toISOString(), otpAttempts: 0, otpConsumed: false } : item) }, orderId, actor, "delivery.assigned", `${orderId}: rider assigned`);
   },
