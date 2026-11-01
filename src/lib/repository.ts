@@ -2,26 +2,325 @@ import { CartItem, Order, State, Status } from "./model";
 import { freshSeed } from "./seed";
 import { cartService, checkoutService } from "./services/commerce";
 
-export const DEMO_SCHEMA_VERSION = 3;
+export const DEMO_SCHEMA_VERSION = 4;
 type Legacy = Record<string, unknown>;
-const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
-const legacyPaise = (value: unknown) => isNumber(value) ? Math.round(value * 100) : 0;
+const isNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+const legacyPaise = (value: unknown) =>
+  isNumber(value) ? Math.round(value * 100) : 0;
 
 export function migrateDemoState(raw: Legacy): State {
   const base = freshSeed();
   const version = isNumber(raw.schemaVersion) ? raw.schemaVersion : 0;
   if (version >= DEMO_SCHEMA_VERSION) return raw as State;
-  const products = Array.isArray(raw.products) ? raw.products.map((item) => { const product = item as Legacy; return { ...product, pricePaise: isNumber(product.pricePaise) ? product.pricePaise : legacyPaise(product.price), archived: product.archived ?? false, available: product.available ?? (isNumber(product.stock) && product.stock > 0), variants: product.variants || [], customizationGroups: product.customizationGroups || [] }; }) : base.products;
-  const merchants = Array.isArray(raw.merchants) ? raw.merchants : base.merchants;
-  const selection = { merchantId: String((raw.selection as Legacy)?.merchantId || "m1"), branchId: String((raw.selection as Legacy)?.branchId || "b1"), riderId: String((raw.selection as Legacy)?.riderId || "r1") };
+  const products = Array.isArray(raw.products)
+    ? raw.products.map((item) => {
+        const product = item as Legacy;
+        return {
+          ...product,
+          pricePaise: isNumber(product.pricePaise)
+            ? product.pricePaise
+            : legacyPaise(product.price),
+          archived: product.archived ?? false,
+          available:
+            product.available ?? (isNumber(product.stock) && product.stock > 0),
+          variants: product.variants || [],
+          customizationGroups: product.customizationGroups || [],
+        };
+      })
+    : base.products;
+  const merchants = Array.isArray(raw.merchants)
+    ? raw.merchants
+    : base.merchants;
+  const selection = {
+    merchantId: String((raw.selection as Legacy)?.merchantId || "m1"),
+    branchId: String((raw.selection as Legacy)?.branchId || "b1"),
+    riderId: String((raw.selection as Legacy)?.riderId || "r1"),
+  };
   const oldCart = (raw.cart || {}) as Legacy;
-  const cartItems = Array.isArray(oldCart.items) ? oldCart.items.map((item) => { const line = item as Legacy; const quantity = isNumber(line.quantity) ? line.quantity : 1; const unitPricePaise = isNumber(line.unitPricePaise) ? line.unitPricePaise : legacyPaise(line.price); const addonTotalPaise = isNumber(line.addonTotalPaise) ? line.addonTotalPaise : 0; return { id: String(line.id || `migrated-${line.productId}-${line.option || "standard"}`), productId: String(line.productId), name: String(line.name), image: String(line.image || "/images/food.jpg"), variantId: line.variantId as string | undefined, variantName: (line.option as string | undefined)?.split(" + ")[0], addonIds: Array.isArray(line.addonIds) ? line.addonIds as string[] : [], addonNames: Array.isArray(line.addonNames) ? line.addonNames as string[] : [], unitPricePaise, addonTotalPaise, lineTotalPaise: isNumber(line.lineTotalPaise) ? line.lineTotalPaise : (unitPricePaise + addonTotalPaise) * quantity, quantity, option: String(line.option || "Standard") }; }) : [];
-  const orders = Array.isArray(raw.orders) ? raw.orders.map((item) => { const order = item as Legacy; const items = Array.isArray(order.items) ? order.items.map((line) => { const old = line as Legacy; const quantity = isNumber(old.quantity) ? old.quantity : 1; const unitPricePaise = isNumber(old.unitPricePaise) ? old.unitPricePaise : legacyPaise(old.price); const addonTotalPaise = isNumber(old.addonTotalPaise) ? old.addonTotalPaise : 0; return { id: String(old.id || `migrated-line-${old.productId}`), productId: String(old.productId), name: String(old.name), image: String(old.image || "/images/food.jpg"), variantId: old.variantId as string | undefined, variantName: (old.option as string | undefined)?.split(" + ")[0], addonIds: Array.isArray(old.addonIds) ? old.addonIds as string[] : [], addonNames: Array.isArray(old.addonNames) ? old.addonNames as string[] : [], unitPricePaise, addonTotalPaise, lineTotalPaise: isNumber(old.lineTotalPaise) ? old.lineTotalPaise : (unitPricePaise + addonTotalPaise) * quantity, quantity, option: String(old.option || "Standard") }; }) : []; const subtotalPaise = isNumber(order.subtotalPaise) ? order.subtotalPaise : items.reduce((sum, line) => sum + line.lineTotalPaise, 0); const discountPaise = isNumber(order.discountPaise) ? order.discountPaise : legacyPaise(order.discount); const deliveryFeePaise = isNumber(order.deliveryFeePaise) ? order.deliveryFeePaise : 4000; return { ...order, branchId: order.branchId || (order.merchantId === "m4" ? "b4" : "b1"), items, subtotalPaise, deliveryFeePaise, taxPaise: isNumber(order.taxPaise) ? order.taxPaise : 0, discountPaise, totalPaise: isNumber(order.totalPaise) ? order.totalPaise : legacyPaise(order.total), paymentStatus: order.paymentStatus || "Simulated paid" }; }) : base.orders;
-  return { ...base, ...raw, schemaVersion: DEMO_SCHEMA_VERSION, selection, products: products as State["products"], cart: { merchantId: String(oldCart.merchantId || ""), branchId: String(oldCart.branchId || selection.branchId || ""), kind: oldCart.kind as State["cart"]["kind"], items: cartItems }, orders: orders as Order[], addresses: (Array.isArray(raw.addresses) ? raw.addresses.map((item) => ({ city: "Bengaluru", state: "Karnataka", pin: "560000", ...(item as object) })) : base.addresses) as State["addresses"], promotions: Array.isArray(raw.promotions) ? raw.promotions.map((item) => ({ type: "fixed", valuePaise: 10000, minOrderPaise: 49900, usedCount: 0, ...(item as object) })) as State["promotions"] : base.promotions, paymentAttempts: raw.paymentAttempts as State["paymentAttempts"] || [], checkoutKeys: raw.checkoutKeys as string[] || [], branches: raw.branches as State["branches"] || base.branches, merchantManagers: raw.merchantManagers as State["merchantManagers"] || base.merchantManagers, catalogCategories: raw.catalogCategories as State["catalogCategories"] || base.catalogCategories, branchCatalog: raw.branchCatalog as State["branchCatalog"] || [], inventory: raw.inventory as State["inventory"] || base.inventory, stockAdjustments: raw.stockAdjustments as State["stockAdjustments"] || [], catalogMedia: raw.catalogMedia as State["catalogMedia"] || [], catalogAudit: raw.catalogAudit as State["catalogAudit"] || [], refunds: raw.refunds as State["refunds"] || [], deductionNotes: String(raw.deductionNotes || ""), notifications: raw.notifications as State["notifications"] || base.notifications, support: raw.support as State["support"] || [], audit: raw.audit as State["audit"] || [], settings: raw.settings as State["settings"] || base.settings, favorites: raw.favorites as string[] || [], customer: raw.customer as State["customer"] || base.customer, riders: raw.riders as State["riders"] || base.riders, merchants: merchants as State["merchants"] };
+  const cartItems = Array.isArray(oldCart.items)
+    ? oldCart.items.map((item) => {
+        const line = item as Legacy;
+        const quantity = isNumber(line.quantity) ? line.quantity : 1;
+        const unitPricePaise = isNumber(line.unitPricePaise)
+          ? line.unitPricePaise
+          : legacyPaise(line.price);
+        const addonTotalPaise = isNumber(line.addonTotalPaise)
+          ? line.addonTotalPaise
+          : 0;
+        return {
+          id: String(
+            line.id ||
+              `migrated-${line.productId}-${line.option || "standard"}`,
+          ),
+          productId: String(line.productId),
+          name: String(line.name),
+          image: String(line.image || "/images/food.jpg"),
+          variantId: line.variantId as string | undefined,
+          variantName: (line.option as string | undefined)?.split(" + ")[0],
+          addonIds: Array.isArray(line.addonIds)
+            ? (line.addonIds as string[])
+            : [],
+          addonNames: Array.isArray(line.addonNames)
+            ? (line.addonNames as string[])
+            : [],
+          unitPricePaise,
+          addonTotalPaise,
+          lineTotalPaise: isNumber(line.lineTotalPaise)
+            ? line.lineTotalPaise
+            : (unitPricePaise + addonTotalPaise) * quantity,
+          quantity,
+          option: String(line.option || "Standard"),
+        };
+      })
+    : [];
+  const orders = Array.isArray(raw.orders)
+    ? raw.orders.map((item) => {
+        const order = item as Legacy;
+        const items = Array.isArray(order.items)
+          ? order.items.map((line) => {
+              const old = line as Legacy;
+              const quantity = isNumber(old.quantity) ? old.quantity : 1;
+              const unitPricePaise = isNumber(old.unitPricePaise)
+                ? old.unitPricePaise
+                : legacyPaise(old.price);
+              const addonTotalPaise = isNumber(old.addonTotalPaise)
+                ? old.addonTotalPaise
+                : 0;
+              return {
+                id: String(old.id || `migrated-line-${old.productId}`),
+                productId: String(old.productId),
+                name: String(old.name),
+                image: String(old.image || "/images/food.jpg"),
+                variantId: old.variantId as string | undefined,
+                variantName: (old.option as string | undefined)?.split(
+                  " + ",
+                )[0],
+                addonIds: Array.isArray(old.addonIds)
+                  ? (old.addonIds as string[])
+                  : [],
+                addonNames: Array.isArray(old.addonNames)
+                  ? (old.addonNames as string[])
+                  : [],
+                unitPricePaise,
+                addonTotalPaise,
+                lineTotalPaise: isNumber(old.lineTotalPaise)
+                  ? old.lineTotalPaise
+                  : (unitPricePaise + addonTotalPaise) * quantity,
+                quantity,
+                option: String(old.option || "Standard"),
+              };
+            })
+          : [];
+        const subtotalPaise = isNumber(order.subtotalPaise)
+          ? order.subtotalPaise
+          : items.reduce((sum, line) => sum + line.lineTotalPaise, 0);
+        const discountPaise = isNumber(order.discountPaise)
+          ? order.discountPaise
+          : legacyPaise(order.discount);
+        const deliveryFeePaise = isNumber(order.deliveryFeePaise)
+          ? order.deliveryFeePaise
+          : 4000;
+        return {
+          ...order,
+          branchId: order.branchId || (order.merchantId === "m4" ? "b4" : "b1"),
+          items,
+          subtotalPaise,
+          deliveryFeePaise,
+          taxPaise: isNumber(order.taxPaise) ? order.taxPaise : 0,
+          discountPaise,
+          totalPaise: isNumber(order.totalPaise)
+            ? order.totalPaise
+            : legacyPaise(order.total),
+          paymentStatus: order.paymentStatus || "Simulated paid",
+        };
+      })
+    : base.orders;
+  return {
+    ...base,
+    ...raw,
+    schemaVersion: DEMO_SCHEMA_VERSION,
+    selection,
+    products: products as State["products"],
+    cart: {
+      merchantId: String(oldCart.merchantId || ""),
+      branchId: String(oldCart.branchId || selection.branchId || ""),
+      kind: oldCart.kind as State["cart"]["kind"],
+      items: cartItems,
+    },
+    orders: orders as Order[],
+    addresses: (Array.isArray(raw.addresses)
+      ? raw.addresses.map((item) => ({
+          city: "Bengaluru",
+          state: "Karnataka",
+          pin: "560000",
+          ...(item as object),
+        }))
+      : base.addresses) as State["addresses"],
+    promotions: Array.isArray(raw.promotions)
+      ? (raw.promotions.map((item) => ({
+          type: "fixed",
+          valuePaise: 10000,
+          minOrderPaise: 49900,
+          usedCount: 0,
+          ...(item as object),
+        })) as State["promotions"])
+      : base.promotions,
+    paymentAttempts: (raw.paymentAttempts as State["paymentAttempts"]) || [],
+    checkoutKeys: (raw.checkoutKeys as string[]) || [],
+    branches: (raw.branches as State["branches"]) || base.branches,
+    merchantManagers:
+      (raw.merchantManagers as State["merchantManagers"]) ||
+      base.merchantManagers,
+    catalogCategories:
+      (raw.catalogCategories as State["catalogCategories"]) ||
+      base.catalogCategories,
+    branchCatalog: (raw.branchCatalog as State["branchCatalog"]) || [],
+    inventory: (raw.inventory as State["inventory"]) || base.inventory,
+    stockAdjustments: (raw.stockAdjustments as State["stockAdjustments"]) || [],
+    catalogMedia: (raw.catalogMedia as State["catalogMedia"]) || [],
+    catalogAudit: (raw.catalogAudit as State["catalogAudit"]) || [],
+    refunds: (raw.refunds as State["refunds"]) || [],
+    deductionNotes: String(raw.deductionNotes || ""),
+    notifications:
+      (raw.notifications as State["notifications"]) || base.notifications,
+    support: (raw.support as State["support"]) || [],
+    audit: (raw.audit as State["audit"]) || [],
+    settings: (raw.settings as State["settings"]) || base.settings,
+    favorites: (raw.favorites as string[]) || [],
+    customer: (raw.customer as State["customer"]) || base.customer,
+    riders: (raw.riders as State["riders"]) || base.riders,
+    merchants: merchants as State["merchants"],
+  };
 }
-export const repository = { load: () => { try { const raw = localStorage.getItem("savor-demo-v1"); return raw ? migrateDemoState(JSON.parse(raw)) : freshSeed(); } catch { return freshSeed(); } }, save: (state: State) => { try { localStorage.setItem("savor-demo-v1", JSON.stringify(state)); } catch {} }, reset: () => { try { localStorage.removeItem("savor-demo-v1"); } catch {} return freshSeed(); } };
-export const nextStatus: Partial<Record<Status, Status>> = { Pending: "Accepted", Accepted: "Preparing", Preparing: "Ready", Ready: "Out for delivery", "Out for delivery": "Delivered" };
-export function updateOrder(state: State, id: string, status: Status, riderId?: string): State { const order = state.orders.find((item) => item.id === id); if (!order) throw Error("Order not found"); if (status !== order.status && status !== "Cancelled" && nextStatus[order.status] !== status) throw Error("This order cannot move to that status."); if (riderId && !state.riders.find((rider) => rider.id === riderId && rider.enabled && rider.merchantIds.includes(order.merchantId) && rider.availability !== "Offline")) throw Error("Choose an available rider associated with this merchant."); const orders = state.orders.map((item) => item.id === id ? { ...item, status, riderId: riderId || item.riderId } : item); return { ...state, orders, riders: state.riders.map((rider) => rider.id === riderId ? { ...rider, availability: status === "Delivered" || status === "Cancelled" ? "Available" : "Busy" } : rider), audit: [{ id: crypto.randomUUID(), message: `${id}: ${status}` }, ...state.audit] }; }
-export function verifyDelivery(state: State, id: string, riderId: string, otp: string) { const order = state.orders.find((item) => item.id === id); if (!order || order.riderId !== riderId || order.otp !== otp) throw Error("That demo OTP doesn’t match. Please try again."); return updateOrder(state, id, "Delivered"); }
-export function addCartItem(state: State, merchantId: string, item: CartItem, replace = false): State { return cartService.add(state, merchantId, state.selection.branchId, { productId: item.productId, variantId: item.variantId, addonIds: item.addonIds, quantity: item.quantity }, replace); }
-export function placeOrder(state: State, input: { addressId: string; instructions: string; payment: string; discount?: number; now: string }) { const result = checkoutService.place(state, { addressId: input.addressId, instructions: input.instructions, paymentMethod: input.payment, idempotencyKey: `legacy-${input.now}`, now: input.now }); if (!result.orderId) throw Error("Simulated payment failed."); return { state: result.state, order: result.state.orders.find((item) => item.id === result.orderId)! }; }
+export const repository = {
+  load: () => {
+    try {
+      const raw = localStorage.getItem("savor-demo-v1");
+      return raw ? migrateDemoState(JSON.parse(raw)) : freshSeed();
+    } catch {
+      return freshSeed();
+    }
+  },
+  save: (state: State) => {
+    try {
+      localStorage.setItem("savor-demo-v1", JSON.stringify(state));
+    } catch {}
+  },
+  reset: () => {
+    try {
+      localStorage.removeItem("savor-demo-v1");
+    } catch {}
+    return freshSeed();
+  },
+};
+export const nextStatus: Partial<Record<Status, Status>> = {
+  Pending: "Accepted",
+  Accepted: "Preparing",
+  Preparing: "Ready",
+  Ready: "Out for delivery",
+  "Out for delivery": "Delivered",
+};
+export function updateOrder(
+  state: State,
+  id: string,
+  status: Status,
+  riderId?: string,
+): State {
+  const order = state.orders.find((item) => item.id === id);
+  if (!order) throw Error("Order not found");
+  if (
+    status !== order.status &&
+    status !== "Cancelled" &&
+    nextStatus[order.status] !== status
+  )
+    throw Error("This order cannot move to that status.");
+  if (
+    riderId &&
+    !state.riders.find(
+      (rider) =>
+        rider.id === riderId &&
+        rider.enabled &&
+        rider.merchantIds.includes(order.merchantId) &&
+        rider.availability !== "Offline",
+    )
+  )
+    throw Error("Choose an available rider associated with this merchant.");
+  const orders = state.orders.map((item) =>
+    item.id === id
+      ? { ...item, status, riderId: riderId || item.riderId }
+      : item,
+  );
+  return {
+    ...state,
+    orders,
+    riders: state.riders.map((rider) =>
+      rider.id === riderId
+        ? {
+            ...rider,
+            availability:
+              status === "Delivered" || status === "Cancelled"
+                ? "Available"
+                : "Busy",
+          }
+        : rider,
+    ),
+    audit: [
+      { id: crypto.randomUUID(), message: `${id}: ${status}` },
+      ...state.audit,
+    ],
+  };
+}
+export function verifyDelivery(
+  state: State,
+  id: string,
+  riderId: string,
+  otp: string,
+) {
+  const order = state.orders.find((item) => item.id === id);
+  if (!order || order.riderId !== riderId || order.otp !== otp)
+    throw Error("That demo OTP doesn’t match. Please try again.");
+  return updateOrder(state, id, "Delivered");
+}
+export function addCartItem(
+  state: State,
+  merchantId: string,
+  item: CartItem,
+  replace = false,
+): State {
+  return cartService.add(
+    state,
+    merchantId,
+    state.selection.branchId,
+    {
+      productId: item.productId,
+      variantId: item.variantId,
+      addonIds: item.addonIds,
+      quantity: item.quantity,
+    },
+    replace,
+  );
+}
+export function placeOrder(
+  state: State,
+  input: {
+    addressId: string;
+    instructions: string;
+    payment: string;
+    discount?: number;
+    now: string;
+  },
+) {
+  const result = checkoutService.place(state, {
+    addressId: input.addressId,
+    instructions: input.instructions,
+    paymentMethod: input.payment,
+    idempotencyKey: `legacy-${input.now}`,
+    now: input.now,
+  });
+  if (!result.orderId) throw Error("Simulated payment failed.");
+  return {
+    state: result.state,
+    order: result.state.orders.find((item) => item.id === result.orderId)!,
+  };
+}

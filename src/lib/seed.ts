@@ -4,9 +4,11 @@ const food = "/images/food.jpg",
   salad = "/images/salad.jpg",
   grocery = "/images/grocery.jpg";
 const catalogPrice = (kind: "food" | "grocery", index: number) =>
-  (kind === "grocery" ? [149, 89, 65, 180, 72, 120] : [289, 329, 349, 179, 129, 199])[index];
+  (kind === "grocery"
+    ? [149, 89, 65, 180, 72, 120]
+    : [289, 329, 349, 179, 129, 199])[index];
 export const seed: State = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   paymentAttempts: [],
   checkoutKeys: [],
   orderEvents: [],
@@ -110,12 +112,48 @@ export const seed: State = {
   catalogMedia: [],
   catalogAudit: [],
   merchantManagers: [
-    { id: "manager-m1", name: "Meera Rao", merchantId: "m1", branchIds: ["b1"], active: true },
-    { id: "manager-m2", name: "Dev Kapoor", merchantId: "m2", branchIds: ["b2"], active: true },
-    { id: "manager-m3", name: "Riya Nair", merchantId: "m3", branchIds: ["b3"], active: true },
-    { id: "manager-m4", name: "Kavya Reddy", merchantId: "m4", branchIds: ["b4"], active: true },
-    { id: "manager-m5", name: "Aarav Patel", merchantId: "m5", branchIds: ["b5"], active: true },
-    { id: "manager-m6", name: "Nisha Jain", merchantId: "m6", branchIds: ["b6"], active: true },
+    {
+      id: "manager-m1",
+      name: "Meera Rao",
+      merchantId: "m1",
+      branchIds: ["b1"],
+      active: true,
+    },
+    {
+      id: "manager-m2",
+      name: "Dev Kapoor",
+      merchantId: "m2",
+      branchIds: ["b2"],
+      active: true,
+    },
+    {
+      id: "manager-m3",
+      name: "Riya Nair",
+      merchantId: "m3",
+      branchIds: ["b3"],
+      active: true,
+    },
+    {
+      id: "manager-m4",
+      name: "Kavya Reddy",
+      merchantId: "m4",
+      branchIds: ["b4"],
+      active: true,
+    },
+    {
+      id: "manager-m5",
+      name: "Aarav Patel",
+      merchantId: "m5",
+      branchIds: ["b5"],
+      active: true,
+    },
+    {
+      id: "manager-m6",
+      name: "Nisha Jain",
+      merchantId: "m6",
+      branchIds: ["b6"],
+      active: true,
+    },
   ],
   products: [],
   riders: [
@@ -148,13 +186,18 @@ export const seed: State = {
       id: "a1",
       label: "Home",
       line: "24, 5th Cross, Koramangala, Bengaluru 560095",
-      city: "Bengaluru", state: "Karnataka", pin: "560095", default: true,
+      city: "Bengaluru",
+      state: "Karnataka",
+      pin: "560095",
+      default: true,
     },
     {
       id: "a2",
       label: "Work",
       line: "WeWork, Embassy GolfLinks, Bengaluru 560071",
-      city: "Bengaluru", state: "Karnataka", pin: "560071",
+      city: "Bengaluru",
+      state: "Karnataka",
+      pin: "560071",
     },
   ],
   favorites: ["m1"],
@@ -173,16 +216,28 @@ export const seed: State = {
   ],
   support: [],
   audit: [],
-  promotions: [{ code: "FIRSTBITE", enabled: true, type: "fixed", valuePaise: 10000, minOrderPaise: 49900, kind: "food", usedCount: 0 }],
+  promotions: [
+    {
+      code: "FIRSTBITE",
+      enabled: true,
+      type: "fixed",
+      valuePaise: 10000,
+      minOrderPaise: 49900,
+      kind: "food",
+      usedCount: 0,
+    },
+  ],
   settings: { notifications: true, storeOpen: true },
 };
 const everydayHours = (): BusinessHours[] =>
-  (["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const).map((weekday) => ({
-    weekday,
-    open: "09:00",
-    close: "22:30",
-    closed: false,
-  }));
+  (["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const).map(
+    (weekday) => ({
+      weekday,
+      open: "09:00",
+      close: "22:30",
+      closed: false,
+    }),
+  );
 seed.branches = seed.merchants.map((merchant, index) => ({
   id: `b${index + 1}`,
   merchantId: merchant.id,
@@ -193,7 +248,18 @@ seed.branches = seed.merchants.map((merchant, index) => ({
   deliveryAvailable: merchant.approved,
   hours: everydayHours(),
 }));
-seed.riderMemberships = seed.riders.flatMap((rider) => rider.merchantIds.map((merchantId) => ({ id: `membership-${rider.id}-${merchantId}`, riderId: rider.id, merchantId, branchIds: [seed.branches.find((branch) => branch.merchantId === merchantId)!.id], status: "active" as const, createdAt: "2026-10-01T00:00:00.000Z" })));
+seed.riderMemberships = seed.riders.flatMap((rider) =>
+  rider.merchantIds.map((merchantId) => ({
+    id: `membership-${rider.id}-${merchantId}`,
+    riderId: rider.id,
+    merchantId,
+    branchIds: [
+      seed.branches.find((branch) => branch.merchantId === merchantId)!.id,
+    ],
+    status: "active" as const,
+    createdAt: "2026-10-01T00:00:00.000Z",
+  })),
+);
 const menus = [
   [
     "Sesame sunshine bowl",
@@ -335,12 +401,34 @@ seed.products = seed.merchants.flatMap((m, mi) =>
       i === 0
         ? m.kind === "food"
           ? [
-              { id: `v${mi}${i}-regular`, name: "Regular", pricePaise: catalogPrice(m.kind, i) * 100, active: true },
-              { id: `v${mi}${i}-large`, name: "Large", pricePaise: (catalogPrice(m.kind, i) + 70) * 100, active: true },
+              {
+                id: `v${mi}${i}-regular`,
+                name: "Regular",
+                pricePaise: catalogPrice(m.kind, i) * 100,
+                active: true,
+              },
+              {
+                id: `v${mi}${i}-large`,
+                name: "Large",
+                pricePaise: (catalogPrice(m.kind, i) + 70) * 100,
+                active: true,
+              },
             ]
           : [
-              { id: `v${mi}${i}-standard`, name: "Standard", pricePaise: catalogPrice(m.kind, i) * 100, active: true, unit: "1 pack" },
-              { id: `v${mi}${i}-family`, name: "Family pack", pricePaise: (catalogPrice(m.kind, i) + 70) * 100, active: true, unit: "2 packs" },
+              {
+                id: `v${mi}${i}-standard`,
+                name: "Standard",
+                pricePaise: catalogPrice(m.kind, i) * 100,
+                active: true,
+                unit: "1 pack",
+              },
+              {
+                id: `v${mi}${i}-family`,
+                name: "Family pack",
+                pricePaise: (catalogPrice(m.kind, i) + 70) * 100,
+                active: true,
+                unit: "2 packs",
+              },
             ]
         : [],
     customizationGroups:
@@ -353,8 +441,18 @@ seed.products = seed.merchants.flatMap((m, mi) =>
               minSelections: 0,
               maxSelections: 2,
               addons: [
-                { id: `a${mi}${i}-avocado`, name: "Extra avocado", pricePaise: 4000, active: true },
-                { id: `a${mi}${i}-raita`, name: "Cooling raita", pricePaise: 2000, active: true },
+                {
+                  id: `a${mi}${i}-avocado`,
+                  name: "Extra avocado",
+                  pricePaise: 4000,
+                  active: true,
+                },
+                {
+                  id: `a${mi}${i}-raita`,
+                  name: "Cooling raita",
+                  pricePaise: 2000,
+                  active: true,
+                },
               ],
             },
           ]
@@ -362,17 +460,21 @@ seed.products = seed.merchants.flatMap((m, mi) =>
   })),
 );
 seed.catalogCategories = seed.merchants.flatMap((merchant) =>
-  [...new Set(seed.products.filter((product) => product.merchantId === merchant.id).map((product) => product.category))].map(
-    (name, sortOrder) => ({
-      id: `category-${merchant.id}-${sortOrder}`,
-      merchantId: merchant.id,
-      kind: merchant.kind,
-      name,
-      department: merchant.kind === "grocery" ? name : undefined,
-      sortOrder,
-      archived: false,
-    }),
-  ),
+  [
+    ...new Set(
+      seed.products
+        .filter((product) => product.merchantId === merchant.id)
+        .map((product) => product.category),
+    ),
+  ].map((name, sortOrder) => ({
+    id: `category-${merchant.id}-${sortOrder}`,
+    merchantId: merchant.id,
+    kind: merchant.kind,
+    name,
+    department: merchant.kind === "grocery" ? name : undefined,
+    sortOrder,
+    archived: false,
+  })),
 );
 seed.inventory = seed.branches.flatMap((branch) =>
   seed.products

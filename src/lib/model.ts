@@ -141,13 +141,22 @@ export type Rider = {
   id: string;
   name: string;
   merchantIds: string[];
-  availability: "Available" | "Busy" | "Offline";
+  availability: "Available" | "Busy" | "Offline" | "Temporarily unavailable";
   enabled: boolean;
   phone?: string;
+  email?: string;
+  vehicle?: string;
   status?: "active" | "suspended" | "archived";
   branchIds?: string[];
 };
-export type RiderMembership = { id: string; riderId: string; merchantId: string; branchIds: string[]; status: "active" | "suspended" | "archived"; createdAt: string };
+export type RiderMembership = {
+  id: string;
+  riderId: string;
+  merchantId: string;
+  branchIds: string[];
+  status: "active" | "suspended" | "archived";
+  createdAt: string;
+};
 export type CartItem = {
   id: string;
   productId: string;
@@ -184,17 +193,67 @@ export type Order = {
   createdAt: string;
   rating?: number;
   feedback?: string;
-  deliveryState?: "unassigned" | "assigned" | "accepted" | "at_pickup" | "picked_up" | "at_destination" | "failed";
+  deliveryState?:
+    | "unassigned"
+    | "assigned"
+    | "accepted"
+    | "at_pickup"
+    | "picked_up"
+    | "at_destination"
+    | "failed";
   otpAttempts?: number;
   otpExpiresAt?: string;
   otpConsumed?: boolean;
   cancellationReason?: string;
   refundStatus?: "pending" | "refunded" | "failed";
 };
-export type OrderEvent = { id: string; orderId: string; actor: "customer" | "merchant" | "rider" | "admin" | "system"; type: string; message: string; createdAt: string; reason?: string };
-export type Address = { id: string; label: string; line: string; building?: string; street?: string; locality?: string; city: string; state: string; pin: string; contactName?: string; contactPhone?: string; default?: boolean };
-export type Promotion = { code: string; enabled: boolean; type: "fixed" | "percent"; valuePaise?: number; percent?: number; minOrderPaise: number; maxDiscountPaise?: number; merchantId?: string; branchId?: string; kind?: "food" | "grocery"; expiresAt?: string; usageLimit?: number; usedCount: number };
-export type PaymentAttempt = { id: string; idempotencyKey: string; orderId?: string; method: string; amountPaise: number; status: "confirmed" | "failed" | "cancelled" | "pending"; createdAt: string };
+export type OrderEvent = {
+  id: string;
+  orderId: string;
+  actor: "customer" | "merchant" | "rider" | "admin" | "system";
+  type: string;
+  message: string;
+  createdAt: string;
+  reason?: string;
+};
+export type Address = {
+  id: string;
+  label: string;
+  line: string;
+  building?: string;
+  street?: string;
+  locality?: string;
+  city: string;
+  state: string;
+  pin: string;
+  contactName?: string;
+  contactPhone?: string;
+  default?: boolean;
+};
+export type Promotion = {
+  code: string;
+  enabled: boolean;
+  type: "fixed" | "percent";
+  valuePaise?: number;
+  percent?: number;
+  minOrderPaise: number;
+  maxDiscountPaise?: number;
+  merchantId?: string;
+  branchId?: string;
+  kind?: "food" | "grocery";
+  expiresAt?: string;
+  usageLimit?: number;
+  usedCount: number;
+};
+export type PaymentAttempt = {
+  id: string;
+  idempotencyKey: string;
+  orderId?: string;
+  method: string;
+  amountPaise: number;
+  status: "confirmed" | "failed" | "cancelled" | "pending";
+  createdAt: string;
+};
 export type State = {
   refunds: RefundRecord[];
   deductionNotes: string;
@@ -211,7 +270,14 @@ export type State = {
   products: Product[];
   riders: Rider[];
   orders: Order[];
-  cart: { merchantId: string; branchId: string; kind?: "food" | "grocery"; items: CartItem[]; createdAt?: string; updatedAt?: string };
+  cart: {
+    merchantId: string;
+    branchId: string;
+    kind?: "food" | "grocery";
+    items: CartItem[];
+    createdAt?: string;
+    updatedAt?: string;
+  };
   addresses: Address[];
   favorites: string[];
   customer: { id: string; name: string; email: string; phone: string };

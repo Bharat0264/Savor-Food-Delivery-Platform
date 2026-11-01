@@ -6,7 +6,7 @@ import { Check } from "lucide-react";
 import { useDemo } from "./provider";
 import { Empty } from "./ui";
 import { MockMap } from "./account";
-import { deliveryOperations } from "@/lib/services";
+import { deliveryOperations, riderManagementService } from "@/lib/services";
 import { brand } from "@/lib/brand";
 import { Order } from "@/lib/model";
 export function RiderApp({ tab = "" }: { tab?: string }) {
@@ -17,22 +17,55 @@ export function RiderApp({ tab = "" }: { tab?: string }) {
   const [otp, setOtp] = useState("");
   const router = useRouter();
   const rider = state.riders.find((r) => r.id === riderId)!;
+  const memberships = (state.riderMemberships || []).filter(
+    (membership) => membership.riderId === riderId,
+  );
+  const activeMemberships = memberships.filter(
+    (membership) => membership.status === "active",
+  );
   const assignments = state.orders.filter(
-    (o) => o.riderId === riderId && rider.merchantIds.includes(o.merchantId),
+    (o) =>
+      o.riderId === riderId &&
+      (o.status === "Delivered" ||
+        memberships.some(
+          (membership) =>
+            membership.merchantId === o.merchantId &&
+            membership.branchIds.includes(o.branchId),
+        )),
   );
   const completed = assignments.filter((o) => o.status === "Delivered");
   const act = (o: Order) => {
-    if (!rider.enabled) {
-      toast("Your demo rider is disabled. Contact the merchant.");
+    if (
+      !rider.enabled ||
+      !memberships.some(
+        (membership) =>
+          membership.merchantId === o.merchantId &&
+          membership.branchIds.includes(o.branchId) &&
+          membership.status === "active",
+      )
+    ) {
+      toast("This delivery membership is unavailable. Contact the merchant.");
       return;
     }
     try {
-      const updated = o.deliveryState === "at_destination" ? deliveryOperations.verifyOtp(state, riderId, o.id, otp) : deliveryOperations.riderTransition(state, riderId, o.id, o.deliveryState === "assigned" ? "accept" : o.deliveryState === "accepted" ? "arrive_pickup" : o.deliveryState === "at_pickup" ? "pickup" : "arrive_destination");
+      const updated =
+        o.deliveryState === "at_destination"
+          ? deliveryOperations.verifyOtp(state, riderId, o.id, otp)
+          : deliveryOperations.riderTransition(
+              state,
+              riderId,
+              o.id,
+              o.deliveryState === "assigned"
+                ? "accept"
+                : o.deliveryState === "accepted"
+                  ? "arrive_pickup"
+                  : o.deliveryState === "at_pickup"
+                    ? "pickup"
+                    : "arrive_destination",
+            );
       setState(() => updated);
       setOtp("");
-      toast(
-        "Delivery progress updated.",
-      );
+      toast("Delivery progress updated.");
     } catch (e) {
       toast((e as Error).message);
     }
@@ -67,28 +100,36 @@ export function RiderApp({ tab = "" }: { tab?: string }) {
           <em>Let’s deliver some good.</em>
         </h1>
         <p>
-          {rider.merchantIds
-            .map((id) => state.merchants.find((m) => m.id === id)?.name)
+          {activeMemberships
+            .map(
+              (membership) =>
+                state.merchants.find((m) => m.id === membership.merchantId)
+                  ?.name,
+            )
             .join(" · ")}
         </p>
         <div className="chips">
-          {(["Available", "Busy", "Offline"] as const).map((a) => (
-            <button
-              className={rider.availability === a ? "chip active" : "chip"}
-              key={a}
-              disabled={!rider.enabled}
-              onClick={() =>
-                setState((s) => ({
-                  ...s,
-                  riders: s.riders.map((r) =>
-                    r.id === riderId ? { ...r, availability: a } : r,
-                  ),
-                }))
-              }
-            >
-              {a}
-            </button>
-          ))}
+          {(["Available", "Offline", "Temporarily unavailable"] as const).map(
+            (a) => (
+              <button
+                className={rider.availability === a ? "chip active" : "chip"}
+                key={a}
+                disabled={!rider.enabled}
+                onClick={() => {
+                  try {
+                    setState(() =>
+                      riderManagementService.setAvailability(state, riderId, a),
+                    );
+                    toast(`Availability set to ${a}.`);
+                  } catch (error) {
+                    toast((error as Error).message);
+                  }
+                }}
+              >
+                {a}
+              </button>
+            ),
+          )}
         </div>
       </div>
       <nav className="rider-tabs">
@@ -120,8 +161,29 @@ export function RiderApp({ tab = "" }: { tab?: string }) {
       ) : tab === "profile" ? (
         <div className="panel">
           <h2>{rider.name}</h2>
-          <p>Memberships: {rider.merchantIds.join(", ")}</p>
-          <p>Status: {rider.enabled ? "Enabled" : "Disabled"}</p>
+          <p>
+            Memberships:{" "}
+            {memberships
+              .map(
+                (membership) =>
+                  `${state.merchants.find((merchant) => merchant.id === membership.merchantId)?.name || membership.merchantId} (${membership.status})`,
+              )
+              .join(" · ") || "None"}
+          </p>
+          <p>
+            Authorized branches:{" "}
+            {activeMemberships
+              .flatMap((membership) => membership.branchIds)
+              .map(
+                (id) => state.branches.find((branch) => branch.id === id)?.name,
+              )
+              .filter(Boolean)
+              .join(" · ") || "No active branches"}
+          </p>
+          <p>
+            Status:{" "}
+            {rider.enabled ? rider.availability : "Membership unavailable"}
+          </p>
           <label className="radio-row">
             <input
               type="checkbox"
@@ -199,10 +261,20 @@ export function RiderApp({ tab = "" }: { tab?: string }) {
                   />
                 </label>
               )}
-              {o.deliveryState && o.deliveryState !== "unassigned" && o.status !== "Delivered" ? (
+              {o.deliveryState &&
+              o.deliveryState !== "unassigned" &&
+              o.status !== "Delivered" ? (
                 <button className="btn full" onClick={() => act(o)}>
                   <Check size={18} />
-                  {o.deliveryState === "at_destination" ? "Verify OTP & complete delivery" : o.deliveryState === "assigned" ? "Accept assignment" : o.deliveryState === "accepted" ? "Reached pickup" : o.deliveryState === "at_pickup" ? "Confirm pickup" : "Reached destination"}
+                  {o.deliveryState === "at_destination"
+                    ? "Verify OTP & complete delivery"
+                    : o.deliveryState === "assigned"
+                      ? "Accept assignment"
+                      : o.deliveryState === "accepted"
+                        ? "Reached pickup"
+                        : o.deliveryState === "at_pickup"
+                          ? "Confirm pickup"
+                          : "Reached destination"}
                 </button>
               ) : (
                 o.status !== "Delivered" && (
