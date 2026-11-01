@@ -43,9 +43,10 @@ test("legacy rupee records migrate once to exact paise values", () => {
 test("schema four state migrates assignment collections without resetting memberships or orders", () => {
   const prior = { ...freshSeed(), schemaVersion: 4, assignments: undefined, assignmentEvents: undefined } as unknown as Record<string, unknown>;
   const migrated = migrateDemoState(prior);
-  assert.equal(migrated.schemaVersion, 5);
+  assert.equal(migrated.schemaVersion, 6);
   assert.deepEqual(migrated.assignments, []);
   assert.deepEqual(migrated.assignmentEvents, []);
+  assert.deepEqual(migrated.trackingSessions, []);
   assert.ok(migrated.riderMemberships.length > 0);
   assert.ok(migrated.orders.some((order) => order.id === "SV1042"));
 });

@@ -12,3 +12,4 @@ export { addressService, cartService, checkoutService, quoteCart, DEMO_DELIVERY_
 export type { CartSelection, CheckoutQuote, CheckoutRequest } from "./commerce";
 export { deliveryOperations } from "./delivery-operations";
 export { riderManagementService } from "./rider-management";
+export { trackingService } from "./tracking";

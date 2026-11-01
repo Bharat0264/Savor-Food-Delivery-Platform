@@ -251,6 +251,11 @@ export type AssignmentEvent = {
   reason?: string;
   createdAt: string;
 };
+export type Coordinate = { latitude: number; longitude: number };
+export type TrackingPhase = "pickup" | "delivery";
+export type TrackingStatus = "ready" | "running" | "paused" | "arrived" | "cancelled" | "completed";
+export type TrackingSession = { id: string; orderId: string; assignmentId: string; riderId: string; phase: TrackingPhase; status: TrackingStatus; pickup: Coordinate; destination: Coordinate; waypoints: Coordinate[]; progress: number; durationSeconds: number; elapsedSeconds: number; startedAt?: string; updatedAt: string; interruptionReason?: string };
+export type TrackingEvent = { id: string; orderId: string; assignmentId: string; riderId: string; type: string; progress: number; createdAt: string; reason?: string };
 export type Address = {
   id: string;
   label: string;
@@ -326,6 +331,8 @@ export type State = {
   riderMemberships: RiderMembership[];
   assignments: DeliveryAssignment[];
   assignmentEvents: AssignmentEvent[];
+  trackingSessions: TrackingSession[];
+  trackingEvents: TrackingEvent[];
   schemaVersion: number;
   settings: { notifications: boolean; storeOpen: boolean };
 };

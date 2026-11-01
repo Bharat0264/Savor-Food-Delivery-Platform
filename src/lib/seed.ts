@@ -8,13 +8,15 @@ const catalogPrice = (kind: "food" | "grocery", index: number) =>
     ? [149, 89, 65, 180, 72, 120]
     : [289, 329, 349, 179, 129, 199])[index];
 export const seed: State = {
-  schemaVersion: 5,
+  schemaVersion: 6,
   paymentAttempts: [],
   checkoutKeys: [],
   orderEvents: [],
   riderMemberships: [],
   assignments: [],
   assignmentEvents: [],
+  trackingSessions: [],
+  trackingEvents: [],
   refunds: [],
   deductionNotes: "",
   selection: { merchantId: "m1", branchId: "b1", riderId: "r1" },

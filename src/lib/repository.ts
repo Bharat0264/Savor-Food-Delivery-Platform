@@ -2,7 +2,7 @@ import { CartItem, Order, State, Status } from "./model";
 import { freshSeed } from "./seed";
 import { cartService, checkoutService } from "./services/commerce";
 
-export const DEMO_SCHEMA_VERSION = 5;
+export const DEMO_SCHEMA_VERSION = 6;
 type Legacy = Record<string, unknown>;
 const isNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
@@ -170,6 +170,8 @@ export function migrateDemoState(raw: Legacy): State {
     checkoutKeys: (raw.checkoutKeys as string[]) || [],
     assignments: (raw.assignments as State["assignments"]) || [],
     assignmentEvents: (raw.assignmentEvents as State["assignmentEvents"]) || [],
+    trackingSessions: (raw.trackingSessions as State["trackingSessions"]) || [],
+    trackingEvents: (raw.trackingEvents as State["trackingEvents"]) || [],
     branches: (raw.branches as State["branches"]) || base.branches,
     merchantManagers:
       (raw.merchantManagers as State["merchantManagers"]) ||

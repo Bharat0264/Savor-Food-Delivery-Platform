@@ -39,6 +39,10 @@ Reassignment requires a reason. Before pickup, a merchant or Super Admin can rep
 
 Merchant and Super Admin order details now show branch-eligible rider candidates, response state, assignment history, cancellation controls, and reason-based reassignment. The rider app exposes an assignment decline action. Browser persistence schema version 5 adds `assignments` and `assignmentEvents`; schema-4 demo data receives empty collections without resetting memberships, orders, payments, or refunds.
 
+## D.2 Task D checkpoint — simulated pickup, delivery, and OTP tracking
+
+Schema version 6 adds persisted local tracking sessions and events. Routes, coordinates, positions, and ETAs are deterministic simulations only: no device GPS, map tiles, routing service, or road-accurate ETA is used. Assignment creates a ready pickup session; rider acceptance starts it. Rider arrival marks the current simulated phase arrived without changing delivery completion. Pickup confirmation initializes and starts a separate delivery route. Destination arrival still leaves the order awaiting the existing OTP verification. A successful OTP completes the assignment and terminally completes tracking, so subsequent simulation advancement is rejected.
+
 ## Validation
 
 - `npm run lint` — passed
