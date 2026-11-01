@@ -273,3 +273,62 @@ test("cancellation restores eligible stock once and refunds stay paise-bounded",
     /exceeds/,
   );
 });
+
+const readyOrder = () => {
+  let state = freshSeed();
+  state = deliveryOperations.merchantTransition(state, "m1", "SV1042", "accept");
+  state = deliveryOperations.merchantTransition(state, "m1", "SV1042", "prepare");
+  return deliveryOperations.merchantTransition(state, "m1", "SV1042", "ready");
+};
+
+test("assignment reservations, acceptance, decline, and history stay consistent", () => {
+  let state = readyOrder();
+  state = deliveryOperations.assign(state, "merchant", "m1", "SV1042", "r1");
+  assert.equal(state.assignments.at(-1)?.status, "pending");
+  assert.equal(state.riders.find((rider) => rider.id === "r1")?.availability, "Busy");
+  assert.throws(() => deliveryOperations.assign(state, "merchant", "m1", "SV1042", "r2"), /already has an active/);
+  state = deliveryOperations.riderTransition(state, "r1", "SV1042", "decline");
+  assert.equal(state.assignments.at(-1)?.status, "declined");
+  assert.equal(state.orders.find((order) => order.id === "SV1042")?.riderId, undefined);
+  assert.equal(state.riders.find((rider) => rider.id === "r1")?.availability, "Available");
+  assert.ok(state.assignmentEvents.some((event) => event.action === "assignment.declined"));
+  assert.throws(() => deliveryOperations.riderTransition(state, "r1", "SV1042", "decline"), /not assigned/);
+});
+
+test("reassignment closes prior access, rotates OTP, and preserves assignment history", () => {
+  let state = readyOrder();
+  state = deliveryOperations.assign(state, "merchant", "m1", "SV1042", "r1");
+  state = deliveryOperations.riderTransition(state, "r1", "SV1042", "accept");
+  const oldOtp = state.orders.find((order) => order.id === "SV1042")!.otp;
+  assert.throws(() => deliveryOperations.reassign(state, "merchant", "m1", "SV1042", "r2", ""), /reason/);
+  state = deliveryOperations.reassign(state, "merchant", "m1", "SV1042", "r2", "Rider requested release");
+  assert.equal(state.assignments.filter((assignment) => assignment.orderId === "SV1042").length, 2);
+  assert.equal(state.assignments.find((assignment) => assignment.riderId === "r1")?.status, "reassigned");
+  assert.equal(state.orders.find((order) => order.id === "SV1042")?.riderId, "r2");
+  assert.notEqual(state.orders.find((order) => order.id === "SV1042")?.otp, oldOtp);
+  assert.throws(() => deliveryOperations.riderTransition(state, "r1", "SV1042", "arrive_pickup"), /not assigned/);
+  assert.ok(state.assignmentEvents.some((event) => event.action === "assignment.reassigned"));
+});
+
+test("cancellation closes current assignment and releases the reserved workload", () => {
+  let state = readyOrder();
+  state = deliveryOperations.assign(state, "merchant", "m1", "SV1042", "r1");
+  state = deliveryOperations.cancel(state, "admin", "SV1042", "Operational cancellation");
+  assert.equal(state.orders.find((order) => order.id === "SV1042")?.status, "Cancelled");
+  assert.equal(state.assignments.at(-1)?.status, "cancelled");
+  assert.equal(state.riders.find((rider) => rider.id === "r1")?.availability, "Available");
+  assert.throws(() => deliveryOperations.riderTransition(state, "r1", "SV1042", "accept"), /not assigned/);
+});
+
+test("post-pickup reassignment requires an admin-confirmed custody handover", () => {
+  let state = readyOrder();
+  state = deliveryOperations.assign(state, "merchant", "m1", "SV1042", "r1");
+  state = deliveryOperations.riderTransition(state, "r1", "SV1042", "accept");
+  state = deliveryOperations.riderTransition(state, "r1", "SV1042", "arrive_pickup");
+  state = deliveryOperations.riderTransition(state, "r1", "SV1042", "pickup");
+  assert.throws(() => deliveryOperations.reassign(state, "merchant", "m1", "SV1042", "r2", "Vehicle issue"), /custody handover/);
+  state = deliveryOperations.reassign(state, "admin", "m1", "SV1042", "r2", "Verified custody transfer", true);
+  assert.equal(state.assignments.at(-1)?.status, "accepted");
+  assert.equal(state.assignments.at(-1)?.custodyHandoverConfirmed, true);
+  assert.ok(state.assignmentEvents.some((event) => event.action === "assignment.custody_handover"));
+});

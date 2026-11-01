@@ -216,6 +216,41 @@ export type OrderEvent = {
   createdAt: string;
   reason?: string;
 };
+export type AssignmentStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "reassigned"
+  | "cancelled"
+  | "completed";
+export type DeliveryAssignment = {
+  id: string;
+  orderId: string;
+  merchantId: string;
+  branchId: string;
+  riderId: string;
+  assignedBy: "merchant" | "admin";
+  assignedAt: string;
+  acceptedAt?: string;
+  declinedAt?: string;
+  closedAt?: string;
+  status: AssignmentStatus;
+  reassignmentReason?: string;
+  cancellationReason?: string;
+  previousAssignmentId?: string;
+  custodyHandoverConfirmed?: boolean;
+};
+export type AssignmentEvent = {
+  id: string;
+  orderId: string;
+  assignmentId: string;
+  actor: "merchant" | "rider" | "admin" | "system";
+  action: string;
+  previousValue?: string;
+  newValue?: string;
+  reason?: string;
+  createdAt: string;
+};
 export type Address = {
   id: string;
   label: string;
@@ -289,6 +324,8 @@ export type State = {
   checkoutKeys: string[];
   orderEvents: OrderEvent[];
   riderMemberships: RiderMembership[];
+  assignments: DeliveryAssignment[];
+  assignmentEvents: AssignmentEvent[];
   schemaVersion: number;
   settings: { notifications: boolean; storeOpen: boolean };
 };

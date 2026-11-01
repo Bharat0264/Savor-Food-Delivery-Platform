@@ -264,18 +264,25 @@ export function RiderApp({ tab = "" }: { tab?: string }) {
               {o.deliveryState &&
               o.deliveryState !== "unassigned" &&
               o.status !== "Delivered" ? (
-                <button className="btn full" onClick={() => act(o)}>
-                  <Check size={18} />
-                  {o.deliveryState === "at_destination"
-                    ? "Verify OTP & complete delivery"
-                    : o.deliveryState === "assigned"
-                      ? "Accept assignment"
-                      : o.deliveryState === "accepted"
-                        ? "Reached pickup"
-                        : o.deliveryState === "at_pickup"
-                          ? "Confirm pickup"
-                          : "Reached destination"}
-                </button>
+                <>
+                  <button className="btn full" onClick={() => act(o)}>
+                    <Check size={18} />
+                    {o.deliveryState === "at_destination"
+                      ? "Verify OTP & complete delivery"
+                      : o.deliveryState === "assigned"
+                        ? "Accept assignment"
+                        : o.deliveryState === "accepted"
+                          ? "Reached pickup"
+                          : o.deliveryState === "at_pickup"
+                            ? "Confirm pickup"
+                            : "Reached destination"}
+                  </button>
+                  {o.deliveryState === "assigned" && (
+                    <button className="text-link" onClick={() => {
+                      try { setState(() => deliveryOperations.riderTransition(state, riderId, o.id, "decline")); toast("Assignment declined. The merchant can choose another rider."); } catch (error) { toast((error as Error).message); }
+                    }}>Decline assignment</button>
+                  )}
+                </>
               ) : (
                 o.status !== "Delivered" && (
                   <p className="demo-notice">

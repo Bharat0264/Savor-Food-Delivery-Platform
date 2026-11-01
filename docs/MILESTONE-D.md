@@ -29,12 +29,22 @@ Suspending or archiving a membership is blocked while it owns an active delivery
 
 The browser persistence schema is version 4. Version-3 stored demo data is migrated through the existing seed-backed migration path so that newly required membership fields are restored without a destructive reset. This remains a browser-local demo; it is not authorization or multi-device synchronization.
 
+## D.2 Task C — assignment, reassignment, and history
+
+Delivery assignments are now separate persisted records, rather than being inferred only from `order.riderId`. Each record has a pending, accepted, declined, reassigned, cancelled, or completed state, timestamps, assigning actor, rider/merchant/branch scope, prior-assignment reference, and reason fields. `order.riderId` remains the current-delivery projection used by the existing screens.
+
+An assignment reserves the rider's default capacity of one active delivery. Eligibility requires an enabled rider, active merchant membership, branch authorization, declared availability, capacity, and a ready non-terminal order. Declining, cancelling, completing, or replacing an assignment releases capacity. Historical assignments and assignment-event records are never overwritten.
+
+Reassignment requires a reason. Before pickup, a merchant or Super Admin can replace an active rider atomically; the former rider loses operational access, the replacement receives a pending request, the OTP is rotated, and both assignment records remain visible. After pickup, ordinary reassignment is rejected. Only a Super Admin can execute the explicit custody-handover exception after confirming physical custody; that replacement is recorded as accepted so it can continue the in-flight delivery without falsely repeating pickup.
+
+Merchant and Super Admin order details now show branch-eligible rider candidates, response state, assignment history, cancellation controls, and reason-based reassignment. The rider app exposes an assignment decline action. Browser persistence schema version 5 adds `assignments` and `assignmentEvents`; schema-4 demo data receives empty collections without resetting memberships, orders, payments, or refunds.
+
 ## Validation
 
 - `npm run lint` — passed
 - `npm run typecheck` — passed
-- `npm test` — passed (28 tests)
+- `npm test` — passed (33 tests)
 - `npm run build -- --webpack` — passed
-- HTTP smoke checks — passed (`/merchant/riders`, `/rider`, `/admin/riders` all returned 200)
+- HTTP smoke checks — passed (`/merchant/orders`, `/merchant/riders`, `/rider`, `/admin/orders`, and `/admin/riders` all returned 200)
 
 Browser visual automation was not available for this increment.

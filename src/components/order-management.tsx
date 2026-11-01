@@ -80,12 +80,29 @@ export function OrderTable({
 }
 export function OrderDetail({
   order: o,
-  act,
+  actor,
+  onAssignment,
+  onAssignmentCancel,
+  onOrderCancel,
 }: {
   order: Order;
-  act: (id: string, status: Status, riderId?: string) => void;
+  actor: "merchant" | "admin";
+  onAssignment: (orderId: string, riderId: string, reason: string, reassign: boolean, custodyHandoverConfirmed: boolean) => void;
+  onAssignmentCancel: (orderId: string, reason: string) => void;
+  onOrderCancel: (orderId: string, reason: string) => void;
 }) {
   const { state } = useDemo();
+  const [riderId, setRiderId] = useState("");
+  const [reason, setReason] = useState("");
+  const [custodyConfirmed, setCustodyConfirmed] = useState(false);
+  const assignment = state.assignments.find((item) => item.orderId === o.id && ["pending", "accepted"].includes(item.status));
+  const candidates = state.riders.map((rider) => {
+    const membership = state.riderMemberships.find((item) => item.riderId === rider.id && item.merchantId === o.merchantId && item.branchIds.includes(o.branchId));
+    const busy = state.assignments.some((item) => item.riderId === rider.id && ["pending", "accepted"].includes(item.status) && item.orderId !== o.id);
+    const eligible = Boolean(rider.enabled && rider.availability === "Available" && membership?.status === "active" && !busy);
+    return { rider, membership, busy, eligible };
+  });
+  const history = state.assignments.filter((item) => item.orderId === o.id);
   return (
     <>
       <span className="status">{o.status}</span>
@@ -104,34 +121,22 @@ export function OrderDetail({
         <b>Total</b>
         <b>{moneyPaise(o.totalPaise)}</b>
       </div>
-      <label className="field">
-        Assign / reassign delivery partner
-        <select
-          value={o.riderId || ""}
-          onChange={(e) => {
-            if (e.target.value) act(o.id, o.status, e.target.value);
-          }}
-          disabled={["Delivered", "Cancelled"].includes(o.status)}
-        >
-          <option value="">Choose an associated rider</option>
-          {state.riders
-            .filter(
-              (r) =>
-                r.merchantIds.includes(o.merchantId) &&
-                r.enabled &&
-                r.availability !== "Offline",
-            )
-            .map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} · {r.availability}
-              </option>
-            ))}
-        </select>
-      </label>
+      <div className="editor-section">
+        <h4>Delivery assignment</h4>
+        {assignment ? <p className="demo-notice">{state.riders.find((rider) => rider.id === assignment.riderId)?.name} · {assignment.status === "pending" ? "awaiting rider acceptance" : "accepted"}</p> : <p className="demo-notice">No active rider assignment.</p>}
+        {!["Delivered", "Cancelled"].includes(o.status) && <>
+          <label className="field">{assignment ? "Replacement rider" : "Eligible delivery partner"}<select value={riderId} onChange={(event) => setRiderId(event.target.value)} disabled={o.status !== "Ready" && !assignment}><option value="">Choose a rider</option>{candidates.filter((candidate) => candidate.eligible && candidate.rider.id !== assignment?.riderId).map(({ rider }) => <option key={rider.id} value={rider.id}>{rider.name} · {rider.phone || "No mobile"}</option>)}</select></label>
+          <div className="assignment-candidates">{candidates.map(({ rider, membership, busy, eligible }) => <small key={rider.id}>{rider.name} · {eligible ? "Eligible" : !membership ? "Not branch-authorized" : membership.status !== "active" ? "Membership unavailable" : busy || rider.availability !== "Available" ? `Unavailable · ${rider.availability}` : "Ineligible"}</small>)}</div>
+          {assignment && <label className="field">{actor === "admin" ? "Override / reassignment reason" : "Reassignment reason"}<input required value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Explain the operational change" /></label>}
+          {assignment && ["picked_up", "at_destination"].includes(o.deliveryState || "") && <label className="radio-row"><input type="checkbox" checked={custodyConfirmed} onChange={(event) => setCustodyConfirmed(event.target.checked)} disabled={actor !== "admin"} /> Admin-confirmed physical custody handover</label>}
+          <div className="modal-actions"><button className="btn" disabled={!riderId || (o.status !== "Ready" && !assignment) || (["picked_up", "at_destination"].includes(o.deliveryState || "") && (actor !== "admin" || !custodyConfirmed))} onClick={() => onAssignment(o.id, riderId, reason, Boolean(assignment), custodyConfirmed)}>{assignment ? "Reassign rider" : "Request assignment"}</button>{assignment && <button className="btn light" disabled={!reason.trim()} onClick={() => onAssignmentCancel(o.id, reason)}>Cancel assignment</button>}</div>
+        </>}
+        {!!history.length && <div className="assignment-history"><h4>Assignment history</h4>{history.map((item) => <p key={item.id}><b>{state.riders.find((rider) => rider.id === item.riderId)?.name}</b> · {item.status} · {new Date(item.assignedAt).toLocaleString("en-IN")}{item.reassignmentReason ? ` · ${item.reassignmentReason}` : ""}</p>)}</div>}
+      </div>
       {!["Delivered", "Cancelled"].includes(o.status) && (
         <button
           className="btn light full"
-          onClick={() => act(o.id, "Cancelled")}
+          onClick={() => onOrderCancel(o.id, reason || "Operational cancellation")}
         >
           Cancel demo order
         </button>

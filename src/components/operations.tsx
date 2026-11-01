@@ -44,7 +44,7 @@ import {
   MerchantProfileEditor,
 } from "./merchant-management";
 import { moneyPaise, brand } from "@/lib/brand";
-import { updateOrder } from "@/lib/repository";
+import { deliveryOperations } from "@/lib/services";
 import { customers, managers, settlements } from "@/lib/selectors";
 import { Order, Status } from "@/lib/model";
 const merchantNav = [
@@ -131,9 +131,13 @@ export function Operations({
   const gross = orders
     .filter((o) => o.status === "Delivered")
     .reduce((n, o) => n + o.totalPaise, 0);
-  const act = (id: string, status: Status, riderId?: string) => {
+  const act = (id: string, status: Status) => {
     try {
-      const updated = updateOrder(state, id, status, riderId);
+      const order = state.orders.find((item) => item.id === id);
+      if (!order) throw Error("Order not found.");
+      const action = status === "Accepted" ? "accept" : status === "Preparing" ? "prepare" : status === "Ready" ? "ready" : status === "Cancelled" ? "reject" : undefined;
+      if (!action) throw Error("Use delivery controls for this operational action.");
+      const updated = deliveryOperations.merchantTransition(state, order.merchantId, id, action, action === "reject" ? "Cancelled from operations" : undefined);
       setState(() => updated);
       toast("Demo order updated");
     } catch (e) {
@@ -662,7 +666,19 @@ export function Operations({
         <Modal title={`Order ${detail.id}`} onClose={() => setDetail(null)}>
           <OrderDetail
             order={state.orders.find((o) => o.id === detail.id)!}
-            act={act}
+            actor={admin ? "admin" : "merchant"}
+            onAssignment={(orderId, riderId, reason, reassign, custodyHandoverConfirmed) => {
+              try {
+                const updated = reassign ? deliveryOperations.reassign(state, admin ? "admin" : "merchant", merchantId, orderId, riderId, reason, custodyHandoverConfirmed) : deliveryOperations.assign(state, admin ? "admin" : "merchant", merchantId, orderId, riderId);
+                setState(() => updated); setDetail(updated.orders.find((item) => item.id === orderId) || null); toast(reassign ? "Rider reassigned" : "Assignment request sent");
+              } catch (error) { toast((error as Error).message); }
+            }}
+            onAssignmentCancel={(orderId, reason) => {
+              try { const updated = deliveryOperations.cancelAssignment(state, admin ? "admin" : "merchant", merchantId, orderId, reason); setState(() => updated); setDetail(updated.orders.find((item) => item.id === orderId) || null); toast("Assignment cancelled"); } catch (error) { toast((error as Error).message); }
+            }}
+            onOrderCancel={(orderId, reason) => {
+              try { const updated = deliveryOperations.cancel(state, admin ? "admin" : "merchant", orderId, reason); setState(() => updated); setDetail(updated.orders.find((item) => item.id === orderId) || null); toast("Order cancelled"); } catch (error) { toast((error as Error).message); }
+            }}
           />
         </Modal>
       )}

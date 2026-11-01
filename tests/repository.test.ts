@@ -40,6 +40,15 @@ test("legacy rupee records migrate once to exact paise values", () => {
   const once = migrateDemoState(legacy); const twice = migrateDemoState(once as unknown as Record<string, unknown>);
   assert.equal(once.cart.items[0].unitPricePaise, 15000); assert.equal(once.orders[0].totalPaise, 61800); assert.equal(twice.cart.items[0].unitPricePaise, 15000);
 });
+test("schema four state migrates assignment collections without resetting memberships or orders", () => {
+  const prior = { ...freshSeed(), schemaVersion: 4, assignments: undefined, assignmentEvents: undefined } as unknown as Record<string, unknown>;
+  const migrated = migrateDemoState(prior);
+  assert.equal(migrated.schemaVersion, 5);
+  assert.deepEqual(migrated.assignments, []);
+  assert.deepEqual(migrated.assignmentEvents, []);
+  assert.ok(migrated.riderMemberships.length > 0);
+  assert.ok(migrated.orders.some((order) => order.id === "SV1042"));
+});
 test("promotion, address serviceability, payment outcomes, and atomic checkout work", () => {
   let state = cartService.add(freshSeed(), "m1", "b1", { productId: "p00", quantity: 2 });
   const quote = quoteCart(state, "FIRSTBITE"); assert.equal(quote.discountPaise, 10000);
